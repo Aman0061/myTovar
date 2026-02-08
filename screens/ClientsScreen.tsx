@@ -60,18 +60,18 @@ const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onUpdateClients 
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <header className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-4">
+    <div className="p-5 max-w-7xl mx-auto">
+      <header className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-3">
         <div className="flex flex-col gap-1">
-          <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Клиенты</h2>
-          <nav className="flex items-center text-sm text-slate-500 gap-2 font-bold">
+          <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Клиенты</h2>
+          <nav className="flex items-center text-xs text-slate-500 gap-2 font-bold">
             <span className="hover:text-primary cursor-pointer transition-colors">Главная</span>
             <span className="material-symbols-outlined text-xs">chevron_right</span>
             <span className="text-primary">База клиентов</span>
           </nav>
         </div>
         
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex items-center gap-2 w-full md:w-auto">
           <div className="relative group flex-1 md:flex-none">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary">
               <span className="material-symbols-outlined text-xl">search</span>
@@ -80,13 +80,13 @@ const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onUpdateClients 
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="block w-full md:w-80 pl-10 pr-4 py-3 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl text-sm focus:ring-primary focus:border-primary transition-all shadow-sm"
+              className="block w-full md:w-72 pl-10 pr-4 py-2.5 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl text-sm focus:ring-primary focus:border-primary transition-all shadow-sm"
               placeholder="Поиск по названию или ИНН..."
             />
           </div>
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="bg-primary hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-primary/20 transition-all active:scale-95 whitespace-nowrap"
+            className="bg-primary hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl font-black text-xs flex items-center gap-2 shadow-xl shadow-primary/20 transition-all active:scale-95 whitespace-nowrap"
           >
             <span className="material-symbols-outlined text-xl">person_add</span>
             Добавить клиента
@@ -95,36 +95,36 @@ const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onUpdateClients 
       </header>
 
       <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
-        <div className="overflow-x-auto min-h-[400px]">
+        <div className="overflow-x-auto min-h-[320px]">
           {filteredClients.length > 0 ? (
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/50 dark:bg-slate-800/20">
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">Тип</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">Наименование</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">ИНН / ОКПО</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">Банковские данные</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 text-right">Действия</th>
+                  <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">Тип</th>
+                  <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">Наименование</th>
+                  <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">ИНН / ОКПО</th>
+                  <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">Банковские данные</th>
+                  <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 text-right">Действия</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                 {filteredClients.map((client) => (
                   <tr key={client.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
-                    <td className="px-8 py-6 whitespace-nowrap">
+                    <td className="px-5 py-3 whitespace-nowrap">
                       <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${client.type === 'ОсОО' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
                         {client.type}
                       </span>
                     </td>
-                    <td className="px-8 py-6 whitespace-nowrap text-sm font-black text-slate-900 dark:text-white">{client.name}</td>
-                    <td className="px-8 py-6 whitespace-nowrap text-xs text-slate-500 font-bold">
+                    <td className="px-5 py-3 whitespace-nowrap text-sm font-black text-slate-900 dark:text-white">{client.name}</td>
+                    <td className="px-5 py-3 whitespace-nowrap text-xs text-slate-500 font-bold">
                       <div>ИНН: {client.inn}</div>
                       <div>ОКПО: {client.okpo}</div>
                     </td>
-                    <td className="px-8 py-6 whitespace-nowrap text-xs text-slate-500">
+                    <td className="px-5 py-3 whitespace-nowrap text-xs text-slate-500">
                       <div className="font-bold text-slate-700 dark:text-slate-300">{client.bankName} (БИК: {client.bik})</div>
                       <div className="font-medium">Р/С: {client.account}</div>
                     </td>
-                    <td className="px-8 py-6 whitespace-nowrap text-right">
+                    <td className="px-5 py-3 whitespace-nowrap text-right">
                       <button 
                         onClick={() => handleDeleteClient(client.id)}
                         className="p-2 text-red-400 hover:text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl"
@@ -137,12 +137,12 @@ const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onUpdateClients 
               </tbody>
             </table>
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-4xl text-slate-300">person_search</span>
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
+                <span className="material-symbols-outlined text-3xl text-slate-300">person_search</span>
               </div>
               <p className="text-slate-500 font-bold">Клиенты не найдены</p>
-              <button onClick={() => setIsModalOpen(true)} className="mt-4 text-primary font-black text-sm hover:underline">Добавить первого клиента</button>
+              <button onClick={() => setIsModalOpen(true)} className="mt-3 text-primary font-black text-xs hover:underline">Добавить первого клиента</button>
             </div>
           )}
         </div>

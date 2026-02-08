@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Screen, TaxEntry, Client, CompanyInfo, AccountUser } from './types';
+import { Screen, TaxEntry, Client, CompanyInfo, AccountUser, RealizationRecord } from './types';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import DataGridScreen from './screens/DataGridScreen';
@@ -29,7 +29,8 @@ const pathToScreen = (pathname: string): Screen => {
 
 const storageKeys = {
   users: 'taxflow_users',
-  session: 'taxflow_session'
+  session: 'taxflow_session',
+  realizations: 'taxflow_realizations'
 };
 
 type SessionData = {
@@ -45,6 +46,7 @@ const App: React.FC = () => {
   const [taxEntries, setTaxEntries] = useState<TaxEntry[]>([]);
   const [userCompany, setUserCompany] = useState<CompanyInfo | null>(null);
   const [users, setUsers] = useState<AccountUser[]>([]);
+  const [realizations, setRealizations] = useState<RealizationRecord[]>([]);
   
   const [clients, setClients] = useState<Client[]>([
     {
@@ -75,6 +77,14 @@ const App: React.FC = () => {
   }, [navigate]);
 
   const currentScreen = useMemo(() => pathToScreen(location.pathname), [location.pathname]);
+  const NewInvoiceScreenWithProps = NewInvoiceScreen as React.ComponentType<{
+    availableProducts: TaxEntry[];
+    clients: Client[];
+    userCompany: CompanyInfo | null;
+    onBack: () => void;
+    realizations: RealizationRecord[];
+    onSaveRealization: (realization: RealizationRecord) => void;
+  }>;
 
   useEffect(() => {
     try {
@@ -83,6 +93,13 @@ const App: React.FC = () => {
       setUsers(parsedUsers);
       const rawSession = localStorage.getItem(storageKeys.session);
       const session: SessionData | null = rawSession ? JSON.parse(rawSession) : null;
+      const rawRealizations = localStorage.getItem(storageKeys.realizations);
+      const parsedRealizations: RealizationRecord[] = rawRealizations ? JSON.parse(rawRealizations) : [];
+      const normalizedRealizations = parsedRealizations.map((r) => ({
+        ...r,
+        items: Array.isArray(r.items) ? r.items : []
+      }));
+      setRealizations(normalizedRealizations);
       if (session?.login) {
         if (session.login === 'admin') {
           setIsAuthenticated(true);
@@ -116,6 +133,11 @@ const App: React.FC = () => {
 
   const persistSession = (login: string) => {
     localStorage.setItem(storageKeys.session, JSON.stringify({ login }));
+  };
+
+  const persistRealizations = (next: RealizationRecord[]) => {
+    setRealizations(next);
+    localStorage.setItem(storageKeys.realizations, JSON.stringify(next));
   };
 
   const handleLogin = (login: string, password: string): string | null => {
@@ -162,6 +184,11 @@ const App: React.FC = () => {
     persistSession(user.login);
     navigate('/data-grid');
     return null;
+  };
+
+  const handleSaveRealization = (realization: RealizationRecord) => {
+    const next = [realization, ...realizations];
+    persistRealizations(next);
   };
 
   const handleLogout = () => {
@@ -253,11 +280,13 @@ const App: React.FC = () => {
               path="/new-invoice"
               element={
                 <RequireAuth>
-                  <NewInvoiceScreen
+                  <NewInvoiceScreenWithProps
                     availableProducts={taxEntries}
                     clients={clients}
                     userCompany={userCompany}
                     onBack={() => navigate('/data-grid')}
+                    realizations={realizations}
+                    onSaveRealization={handleSaveRealization}
                   />
                 </RequireAuth>
               }

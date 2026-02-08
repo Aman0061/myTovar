@@ -367,23 +367,15 @@ const DataGridScreen: React.FC<DataGridScreenProps> = ({ entries, onNewInvoice, 
             <span className="material-symbols-outlined text-xl">upload_file</span>
             Загрузить XML
           </button>
-          <button 
-            onClick={onNewInvoice}
-            className="bg-primary hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl font-black text-xs flex items-center gap-2 shadow-xl shadow-primary/20 transition-all active:scale-95 whitespace-nowrap"
-          >
-            <span className="material-symbols-outlined text-xl">add_circle</span>
-            Создать счет
-          </button>
         </div>
       </header>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
         {[
           { label: 'Всего позиций', value: entries.length.toLocaleString(), icon: 'inventory_2' },
           { label: 'Стоимость склада', value: totalSum.toLocaleString(), sub: 'сом', icon: 'payments' },
-          { label: 'Активных поставщиков', value: supplierCount.toString(), icon: 'groups' },
-          { label: 'Статус синхронизации', value: 'Активен', status: 'success', icon: 'sync' },
+          { label: 'Активных поставщиков', value: supplierCount.toString(), icon: 'groups' }
         ].map((stat, i) => (
           <div key={i} className="bg-white dark:bg-slate-900 p-3 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between mb-2">
@@ -391,17 +383,10 @@ const DataGridScreen: React.FC<DataGridScreenProps> = ({ entries, onNewInvoice, 
               <span className="material-symbols-outlined text-slate-300 text-xl">{stat.icon}</span>
             </div>
             <div className="flex items-baseline gap-1">
-              {stat.status ? (
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
-                  <p className="text-xl font-black text-green-600">{stat.value}</p>
-                </div>
-              ) : (
-                <>
-                  <p className="text-2xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight">{stat.value}</p>
-                  {stat.sub && <span className="text-xs font-bold text-slate-400 ml-1">{stat.sub}</span>}
-                </>
-              )}
+              <>
+                <p className="text-2xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight">{stat.value}</p>
+                {stat.sub && <span className="text-xs font-bold text-slate-400 ml-1">{stat.sub}</span>}
+              </>
             </div>
           </div>
         ))}
@@ -413,18 +398,11 @@ const DataGridScreen: React.FC<DataGridScreenProps> = ({ entries, onNewInvoice, 
           <h3 className="font-black text-slate-900 dark:text-white text-lg tracking-tight">Товары на складе</h3>
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => setIsCatalogModalOpen(true)}
-              className="text-[10px] font-black text-primary px-3 py-2 rounded-xl hover:bg-primary/5 border border-primary/20 transition-all flex items-center gap-2 group"
-            >
-              <span className="material-symbols-outlined text-xl">library_add</span>
-              ИМПОРТ НОВЫХ
-            </button>
-            <button 
               onClick={handleFullCatalogExport}
               className="text-[10px] font-black text-emerald-600 px-3 py-2 rounded-xl hover:bg-emerald-50 border border-emerald-200 transition-all flex items-center gap-2 group"
             >
               <span className="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">database</span>
-              ЭКСПОРТ КАТАЛОГА ГНС
+              ЭКСПОРТ ТОВАРОВ В ГНС
             </button>
           </div>
         </div>
@@ -566,20 +544,6 @@ const DataGridScreen: React.FC<DataGridScreenProps> = ({ entries, onNewInvoice, 
         </div>
       )}
 
-      {/* System Message */}
-      <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center gap-4 p-6 bg-primary/5 border border-primary/10 rounded-3xl animate-in fade-in slide-in-from-bottom-2 duration-500">
-        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-          <span className="material-symbols-outlined">info</span>
-        </div>
-        <div className="flex-1">
-          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
-            Складские остатки обновлены. Вы можете экспортировать весь справочник в Excel для синхронизации с порталом ЭСФ.
-          </p>
-        </div>
-        <button className="text-slate-400 hover:text-slate-600 transition-colors">
-          <span className="material-symbols-outlined">close</span>
-        </button>
-      </div>
     </div>
   );
 };

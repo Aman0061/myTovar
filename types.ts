@@ -54,3 +54,16 @@ export interface AccountUser {
   password: string;
   company: CompanyInfo;
 }
+
+export interface RealizationRecord {
+  id: string;
+  createdAt: string;
+  deliveryDate: string;
+  issueDate: string;
+  counterparty: string;
+  total: number;
+  items: InvoiceItem[];
+  customerInn?: string;
+  customerAccount?: string;
+  contractNumber?: string;
+}

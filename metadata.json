@@ -1,0 +1,7 @@
+{
+  "name": "TaxFlow - SaaS Accounting",
+  "description": "A comprehensive tax and accounting platform for XML processing, data analysis, and invoice generation.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

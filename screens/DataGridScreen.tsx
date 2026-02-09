@@ -1,15 +1,20 @@
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TaxEntry } from '../types';
 import * as XLSX from 'xlsx';
 
 interface DataGridScreenProps {
   entries: TaxEntry[];
-  onNewInvoice: () => void;
   onDataLoaded: (entries: TaxEntry[]) => void;
+  onEntriesUpdated?: (entries: TaxEntry[]) => void;
 }
 
-const DataGridScreen: React.FC<DataGridScreenProps> = ({ entries, onNewInvoice, onDataLoaded }) => {
+const DataGridScreen: React.FC<DataGridScreenProps> = ({
+  entries,
+  onDataLoaded,
+  onEntriesUpdated
+}) => {
   const [search, setSearch] = useState('');
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
   
@@ -17,10 +22,24 @@ const DataGridScreen: React.FC<DataGridScreenProps> = ({ entries, onNewInvoice, 
   const [supplierXmlContent, setSupplierXmlContent] = useState<string | null>(null);
   const [catalogCsvContent, setCatalogCsvContent] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [openEntryMenuId, setOpenEntryMenuId] = useState<string | null>(null);
 
   const supplierFileRef = useRef<HTMLInputElement>(null);
   const catalogFileRef = useRef<HTMLInputElement>(null);
-  const xmlFileRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        openEntryMenuId &&
+        !(event.target as HTMLElement).closest('[data-entry-menu]')
+      ) {
+        setOpenEntryMenuId(null);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, [openEntryMenuId]);
 
   const filteredEntries = useMemo(() => {
     return entries.filter(e => 
@@ -37,6 +56,20 @@ const DataGridScreen: React.FC<DataGridScreenProps> = ({ entries, onNewInvoice, 
     return new Set(entries.map(e => e.supplier)).size;
   }, [entries]);
 
+  const toggleEntryMenu = (id: string) => {
+    setOpenEntryMenuId((prev) => (prev === id ? null : id));
+  };
+
+  const handleDeleteEntry = (id: string) => {
+    setOpenEntryMenuId(null);
+    const next = entries.filter((entry) => entry.id !== id);
+    if (onEntriesUpdated) {
+      onEntriesUpdated(next);
+    } else {
+      onDataLoaded(next);
+    }
+  };
+
   const getSmartTnved = (name: string) => {
     const n = name.toUpperCase();
     if (n.includes('ЛЕСТНИЦА') || n.includes('СТРЕМЯНКА')) return '7616999008';
@@ -50,15 +83,12 @@ const DataGridScreen: React.FC<DataGridScreenProps> = ({ entries, onNewInvoice, 
       return;
     }
 
-    // Get unique product names from the current entries (acting as our DB)
-    const uniqueProducts = Array.from(new Set(entries.map(e => e.product))).sort();
-
-    const excelData = uniqueProducts.map(productName => ({
-      "Наименование товара": productName,
-      "Код единицы измерения": "шт",
-      "Код ТН ВЭД": getSmartTnved(productName),
+    const excelData = entries.map((entry) => ({
+      "Наименование товара": entry.product,
+      "Код единицы измерения": entry.unit || "шт",
+      "Код ТН ВЭД": getSmartTnved(entry.product),
       "Признак товара": "1",
-      "Цена": 0
+      "Цена": entry.price || 0
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
@@ -92,107 +122,10 @@ const DataGridScreen: React.FC<DataGridScreenProps> = ({ entries, onNewInvoice, 
     XLSX.writeFile(workbook, `full_catalog_export_${new Date().getTime()}.xlsx`);
   };
 
-  const handleXmlUploadClick = () => {
-    xmlFileRef.current?.click();
+  const handleAddGoodsClick = () => {
+    navigate('/add-products');
   };
 
-  const handleXmlFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const maxSizeBytes = 10 * 1024 * 1024;
-    if (!file.name.toLowerCase().endsWith('.xml')) {
-      alert('Поддерживаются только XML файлы.');
-      event.target.value = '';
-      return;
-    }
-    if (file.size > maxSizeBytes) {
-      alert('Файл слишком большой. Максимум 10 МБ.');
-      event.target.value = '';
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const xmlString = e.target?.result as string;
-      parseXml(xmlString);
-      event.target.value = '';
-    };
-    reader.onerror = () => {
-      alert('Не удалось прочитать файл. Попробуйте еще раз.');
-      event.target.value = '';
-    };
-    reader.readAsText(file);
-  };
-
-  const parseXml = (xmlString: string) => {
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
-    if (xmlDoc.querySelector('parsererror')) {
-      alert('XML содержит ошибки. Проверьте формат файла.');
-      return;
-    }
-
-    const nextEntries: TaxEntry[] = [];
-    const receipts = xmlDoc.getElementsByTagName('receipt');
-
-    if (receipts.length > 0) {
-      let globalId = 1;
-      for (let i = 0; i < receipts.length; i++) {
-        const receipt = receipts[i];
-
-        const supplier = receipt.getElementsByTagName('contractorName')[0]?.textContent || 'Неизвестный поставщик';
-        const rawDate = receipt.getElementsByTagName('createdDate')[0]?.textContent || '';
-
-        let formattedDate = rawDate;
-        if (rawDate && rawDate.includes('-')) {
-          const [y, m, d] = rawDate.split('-');
-          formattedDate = `${d}.${m}.${y}`;
-        }
-
-        const goods = receipt.getElementsByTagName('good');
-        for (let j = 0; j < goods.length; j++) {
-          const good = goods[j];
-          const productName = good.getElementsByTagName('goodsName')[0]?.textContent || 'Без названия';
-          const quantity = parseFloat(good.getElementsByTagName('baseCount')[0]?.textContent || '0');
-          const price = parseFloat(good.getElementsByTagName('price')[0]?.textContent || '0');
-          const total = quantity * price;
-
-          nextEntries.push({
-            id: `${globalId}`,
-            date: formattedDate,
-            supplier: supplier,
-            product: productName,
-            quantity: quantity,
-            price: price,
-            total: total
-          });
-          globalId++;
-        }
-      }
-    } else {
-      const goods = xmlDoc.getElementsByTagName('good');
-      if (goods.length > 0) {
-        for (let i = 0; i < goods.length; i++) {
-          const good = goods[i];
-          nextEntries.push({
-            id: `${i + 1}`,
-            date: new Date().toLocaleDateString('ru-RU'),
-            supplier: 'Импортированные данные',
-            product: good.getElementsByTagName('goodsName')[0]?.textContent || 'Товар',
-            quantity: parseFloat(good.getElementsByTagName('baseCount')[0]?.textContent || '0'),
-            price: parseFloat(good.getElementsByTagName('price')[0]?.textContent || '0'),
-            total: 0
-          });
-        }
-      }
-    }
-
-    if (nextEntries.length > 0) {
-      onDataLoaded(nextEntries);
-    } else {
-      alert('Не удалось распознать структуру XML. Пожалуйста, проверьте формат файла.');
-    }
-  };
 
   const handleCatalogImport = () => {
     if (!supplierXmlContent || !catalogCsvContent) {
@@ -353,19 +286,12 @@ const DataGridScreen: React.FC<DataGridScreenProps> = ({ entries, onNewInvoice, 
               placeholder="Поиск по поставщику или товару..."
             />
           </div>
-          <input
-            type="file"
-            ref={xmlFileRef}
-            onChange={handleXmlFileChange}
-            accept=".xml"
-            className="hidden"
-          />
           <button
-            onClick={handleXmlUploadClick}
+            onClick={handleAddGoodsClick}
             className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 px-4 py-2.5 rounded-2xl font-black text-xs flex items-center gap-2 shadow-sm transition-all hover:border-primary hover:text-primary"
           >
             <span className="material-symbols-outlined text-xl">upload_file</span>
-            Загрузить XML
+            Добавить товары
           </button>
         </div>
       </header>
@@ -418,6 +344,7 @@ const DataGridScreen: React.FC<DataGridScreenProps> = ({ entries, onNewInvoice, 
                   <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 text-right">Остаток</th>
                   <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 text-right">Цена зак.</th>
                   <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 text-right">Сумма</th>
+                  <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 text-right"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
@@ -432,6 +359,27 @@ const DataGridScreen: React.FC<DataGridScreenProps> = ({ entries, onNewInvoice, 
                     <td className="px-5 py-3 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400 text-right tabular-nums font-bold">{item.price.toLocaleString()}</td>
                     <td className="px-5 py-3 whitespace-nowrap text-sm font-black text-slate-900 dark:text-white text-right tabular-nums">
                       {(item.total).toLocaleString()}
+                    </td>
+                    <td className="px-3 py-3 whitespace-nowrap text-right">
+                      <div className="relative inline-flex" data-entry-menu>
+                        <button
+                          onClick={() => toggleEntryMenu(item.id)}
+                          className="size-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          title="Действия"
+                        >
+                          <span className="material-symbols-outlined">more_horiz</span>
+                        </button>
+                        {openEntryMenuId === item.id && (
+                          <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 overflow-hidden">
+                            <button
+                              onClick={() => handleDeleteEntry(item.id)}
+                              className="w-full text-left px-4 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800"
+                            >
+                              Удалить товар
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

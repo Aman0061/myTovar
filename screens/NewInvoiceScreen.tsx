@@ -43,6 +43,13 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
     }
     return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   };
+  const generateExchangeCode = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    const hex = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).slice(1);
+    return `${hex()}${hex()}-${hex()}-${hex()}-${hex()}-${hex()}${hex()}${hex()}`;
+  };
   const escapeXml = (value: string) => {
     return value
       .replace(/&/g, '&amp;')
@@ -79,7 +86,7 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
     const now = new Date();
     const dateStr = realization.issueDate || now.toISOString().split('T')[0];
     const fullDateStr = `${dateStr}T00:00:00+06:00`;
-    const exchangeCode = realization.id;
+    const exchangeCode = generateExchangeCode();
     const itemsForExport = Array.isArray(realization.items) ? realization.items : [];
     if (itemsForExport.length === 0) {
       throw new Error('В реализации нет товаров для экспорта');
@@ -180,10 +187,13 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
       if (clientSearchRef.current && !clientSearchRef.current.contains(event.target as Node)) {
         setIsClientSearchOpen(false);
       }
+      if (openMenuId && !(event.target as HTMLElement).closest('[data-realization-menu]')) {
+        setOpenMenuId(null);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [openMenuId]);
 
   const isAlreadyAdded = (productName: string) => {
     return items.some(item => item.name === productName);
@@ -300,7 +310,7 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
     const fullDateStr = `${dateStr}T00:00:00+06:00`;
-    const exchangeCode = generateId();
+    const exchangeCode = generateExchangeCode();
 
     let xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n`;
     xml += `<receipts>\n`;
@@ -461,7 +471,7 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
                       <td className="py-3 px-5 text-sm font-black text-slate-900 dark:text-white text-right">
                         <div className="flex items-center justify-end gap-2">
                           <span>{row.total.toLocaleString()} сом</span>
-                          <div className="relative">
+                          <div className="relative" data-realization-menu>
                             <button
                               onClick={() => toggleMenu(row.id)}
                               className="size-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
@@ -470,7 +480,7 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
                               <span className="material-symbols-outlined">more_horiz</span>
                             </button>
                             {openMenuId === row.id && (
-                              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 overflow-hidden">
+                              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 overflow-hidden" data-realization-menu>
                                 <button
                                   onClick={() => handleExportXml(row)}
                                   className="w-full text-left px-4 py-3 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800"

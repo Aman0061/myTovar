@@ -16,6 +16,8 @@ export interface TaxEntry {
   quantity: number;
   price: number;
   total: number;
+  row?: string;
+  unit?: string;
 }
 
 export interface InvoiceItem {

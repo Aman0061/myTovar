@@ -5,6 +5,7 @@ import { Screen, TaxEntry, Client, CompanyInfo, AccountUser, RealizationRecord }
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import DataGridScreen from './screens/DataGridScreen';
+import AddProductsScreen from './screens/AddProductsScreen';
 import NewInvoiceScreen from './screens/NewInvoiceScreen';
 import ClientsScreen from './screens/ClientsScreen';
 import Sidebar from './components/Sidebar';
@@ -199,7 +200,7 @@ const App: React.FC = () => {
   };
 
   const handleDataLoaded = (entries: TaxEntry[]) => {
-    setTaxEntries(entries);
+    setTaxEntries((prev) => [...entries, ...prev]);
     navigate('/data-grid');
   };
 
@@ -270,9 +271,17 @@ const App: React.FC = () => {
                 <RequireAuth>
                   <DataGridScreen
                     entries={taxEntries}
-                    onNewInvoice={() => navigate('/new-invoice')}
                     onDataLoaded={handleDataLoaded}
+                    onEntriesUpdated={setTaxEntries}
                   />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/add-products"
+              element={
+                <RequireAuth>
+                  <AddProductsScreen onDataLoaded={handleDataLoaded} />
                 </RequireAuth>
               }
             />

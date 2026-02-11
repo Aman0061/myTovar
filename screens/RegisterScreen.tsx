@@ -20,6 +20,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
   const [confirmPassword, setConfirmPassword] = useState('');
 
   // Step 2 Data
+  const [fullName, setFullName] = useState('');
   const [companyType, setCompanyType] = useState<CompanyInfo['type']>('ИП');
   const [inn, setInn] = useState('');
   const [address, setAddress] = useState('');
@@ -52,7 +53,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
     }
     setIsLoading(true);
 
-    const login = email.split('@')[0] || email;
     const companyData: CompanyInfo = {
       type: companyType,
       inn,
@@ -60,7 +60,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
       account: settlementAccount,
       bankName,
       bik,
-      name: login
+      name: fullName.trim() || email.split('@')[0] || email
     };
 
     try {
@@ -170,6 +170,18 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
             </form>
           ) : (
             <form onSubmit={handleCompleteRegistration} className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">ФИО</label>
+                <input 
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
+                  placeholder="Иванов Иван Иванович"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Тип</label>

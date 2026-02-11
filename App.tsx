@@ -16,6 +16,7 @@ import { Toaster, toast } from 'react-hot-toast';
 import { supabase } from './lib/supabaseClient';
 import * as clientsApi from './lib/clients';
 import * as productsApi from './lib/products';
+import * as realizationsApi from './lib/realizations';
 import * as authApi from './lib/auth';
 
 const screenToPath: Record<Screen, string> = {
@@ -101,14 +102,6 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const rawRealizations = localStorage.getItem(storageKeys.realizations);
-        const parsedRealizations: RealizationRecord[] = rawRealizations ? JSON.parse(rawRealizations) : [];
-        const normalizedRealizations = parsedRealizations.map((r) => ({
-          ...r,
-          items: Array.isArray(r.items) ? r.items : []
-        }));
-        setRealizations(normalizedRealizations);
-
         // 1) Проверяем Supabase сессию
         const supabaseSession = await authApi.getSession();
         if (supabaseSession?.user?.id) {
@@ -116,12 +109,14 @@ const App: React.FC = () => {
           if (profile) {
             setIsAuthenticated(true);
             setUserCompany(authApi.profileToCompanyInfo(profile));
-            const [loadedClients, loadedProducts] = await Promise.all([
+            const [loadedClients, loadedProducts, loadedRealizations] = await Promise.all([
               clientsApi.getClients(supabaseSession.user.id),
-              productsApi.getProducts(supabaseSession.user.id)
+              productsApi.getProducts(supabaseSession.user.id),
+              realizationsApi.getRealizations(supabaseSession.user.id)
             ]);
             setClients(loadedClients);
             setTaxEntries(loadedProducts);
+            setRealizations(loadedRealizations);
           }
           setIsAuthInitialized(true);
           return;
@@ -142,12 +137,21 @@ const App: React.FC = () => {
             bik: '128001'
           });
           if (supabase) {
-            const [loadedClients, loadedProducts] = await Promise.all([
+            const [loadedClients, loadedProducts, loadedRealizations] = await Promise.all([
               clientsApi.getClients(ADMIN_USER_ID),
-              productsApi.getProducts(ADMIN_USER_ID)
+              productsApi.getProducts(ADMIN_USER_ID),
+              realizationsApi.getRealizations(ADMIN_USER_ID)
             ]);
             setClients(loadedClients);
             setTaxEntries(loadedProducts);
+            setRealizations(loadedRealizations);
+          } else {
+            const rawRealizations = localStorage.getItem(storageKeys.realizations);
+            const parsed = rawRealizations ? JSON.parse(rawRealizations) : [];
+            setRealizations(parsed.map((r: RealizationRecord) => ({
+              ...r,
+              items: Array.isArray(r.items) ? r.items : []
+            })));
           }
         }
 
@@ -161,12 +165,21 @@ const App: React.FC = () => {
             setIsAuthenticated(true);
             setUserCompany(matched.company);
             if (supabase && matched.id) {
-              const [loadedClients, loadedProducts] = await Promise.all([
+              const [loadedClients, loadedProducts, loadedRealizations] = await Promise.all([
                 clientsApi.getClients(matched.id),
-                productsApi.getProducts(matched.id)
+                productsApi.getProducts(matched.id),
+                realizationsApi.getRealizations(matched.id)
               ]);
               setClients(loadedClients);
               setTaxEntries(loadedProducts);
+              setRealizations(loadedRealizations);
+            } else {
+              const rawRealizations = localStorage.getItem(storageKeys.realizations);
+              const parsed: RealizationRecord[] = rawRealizations ? JSON.parse(rawRealizations) : [];
+              setRealizations(parsed.map((r) => ({
+                ...r,
+                items: Array.isArray(r.items) ? r.items : []
+              })));
             }
           }
         }
@@ -207,12 +220,14 @@ const App: React.FC = () => {
       });
       persistSession('admin');
       if (supabase) {
-        const [loadedClients, loadedProducts] = await Promise.all([
+        const [loadedClients, loadedProducts, loadedRealizations] = await Promise.all([
           clientsApi.getClients(ADMIN_USER_ID),
-          productsApi.getProducts(ADMIN_USER_ID)
+          productsApi.getProducts(ADMIN_USER_ID),
+          realizationsApi.getRealizations(ADMIN_USER_ID)
         ]);
         setClients(loadedClients);
         setTaxEntries(loadedProducts);
+        setRealizations(loadedRealizations);
       }
       navigate('/');
       return null;
@@ -225,12 +240,14 @@ const App: React.FC = () => {
       setUserCompany(matched.company);
       persistSession(matched.login, matched.id);
       if (supabase && matched.id) {
-        const [loadedClients, loadedProducts] = await Promise.all([
+        const [loadedClients, loadedProducts, loadedRealizations] = await Promise.all([
           clientsApi.getClients(matched.id),
-          productsApi.getProducts(matched.id)
+          productsApi.getProducts(matched.id),
+          realizationsApi.getRealizations(matched.id)
         ]);
         setClients(loadedClients);
         setTaxEntries(loadedProducts);
+        setRealizations(loadedRealizations);
       }
       navigate('/data-grid');
       return null;
@@ -244,14 +261,16 @@ const App: React.FC = () => {
         const profile = userId ? await authApi.getProfile(userId) : null;
         setIsAuthenticated(true);
         setUserCompany(profile ? authApi.profileToCompanyInfo(profile) : null);
-        const [loadedClients, loadedProducts] = userId
+        const [loadedClients, loadedProducts, loadedRealizations] = userId
           ? await Promise.all([
               clientsApi.getClients(userId),
-              productsApi.getProducts(userId)
+              productsApi.getProducts(userId),
+              realizationsApi.getRealizations(userId)
             ])
-          : [[], []];
+          : [[], [], []];
         setClients(loadedClients);
         setTaxEntries(loadedProducts);
+        setRealizations(loadedRealizations);
         navigate('/data-grid');
         return null;
       } catch (e: unknown) {
@@ -291,15 +310,43 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSaveRealization = (realization: RealizationRecord) => {
-    const next = [realization, ...realizations];
-    persistRealizations(next);
-  };
+  const handleSaveRealization = useCallback(
+    async (realization: RealizationRecord) => {
+      const userId = await getUserId();
+      const next = [realization, ...realizations];
+      setRealizations(next);
+      if (userId && supabase) {
+        try {
+          await realizationsApi.insertRealization(userId, realization);
+        } catch (e: unknown) {
+          setRealizations(realizations);
+          toast.error(e instanceof Error ? e.message : 'Ошибка сохранения');
+        }
+      } else {
+        persistRealizations(next);
+      }
+    },
+    [getUserId, realizations]
+  );
 
-  const handleUpdateRealization = (realization: RealizationRecord) => {
-    const next = realizations.map((row) => (row.id === realization.id ? realization : row));
-    persistRealizations(next);
-  };
+  const handleUpdateRealization = useCallback(
+    async (realization: RealizationRecord) => {
+      const userId = await getUserId();
+      const next = realizations.map((row) => (row.id === realization.id ? realization : row));
+      setRealizations(next);
+      if (userId && supabase) {
+        try {
+          await realizationsApi.updateRealization(userId, realization);
+        } catch (e: unknown) {
+          setRealizations(realizations);
+          toast.error(e instanceof Error ? e.message : 'Ошибка сохранения');
+        }
+      } else {
+        persistRealizations(next);
+      }
+    },
+    [getUserId, realizations]
+  );
 
   const handleLogout = async () => {
     await authApi.signOut();
@@ -307,6 +354,7 @@ const App: React.FC = () => {
     setUserCompany(null);
     setClients([]);
     setTaxEntries([]);
+    setRealizations([]);
     localStorage.removeItem(storageKeys.session);
     navigate('/login');
   };

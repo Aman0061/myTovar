@@ -619,7 +619,7 @@ const App: React.FC = () => {
               path="/reports"
               element={
                 <RequireAuth>
-                  <ReportsScreen />
+                  <ReportsScreen realizations={realizations} taxEntries={taxEntries} />
                 </RequireAuth>
               }
             />

@@ -1,6 +1,12 @@
 import { supabase } from './supabaseClient';
 import type { Client } from '../types';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUuid(id: string): boolean {
+  return UUID_REGEX.test(id);
+}
+
 function toDbRow(client: Client, userId: string, includeId = false) {
   const row: Record<string, unknown> = {
     user_id: userId,
@@ -32,7 +38,7 @@ function fromDbRow(row: Record<string, unknown>): Client {
 }
 
 export async function getClients(userId: string): Promise<Client[]> {
-  if (!supabase) return [];
+  if (!supabase || !isValidUuid(userId)) return [];
   const { data, error } = await supabase
     .from('clients')
     .select('*')
@@ -47,6 +53,7 @@ export async function getClients(userId: string): Promise<Client[]> {
 
 export async function insertClient(userId: string, client: Omit<Client, 'id'>): Promise<Client> {
   if (!supabase) throw new Error('Supabase не настроен');
+  if (!isValidUuid(userId)) throw new Error('Некорректный ID пользователя');
   const row = toDbRow({ ...client, id: '' }, userId, false);
   const { data, error } = await supabase
     .from('clients')
@@ -62,6 +69,7 @@ export async function insertClient(userId: string, client: Omit<Client, 'id'>): 
 
 export async function updateClient(userId: string, client: Client): Promise<void> {
   if (!supabase) throw new Error('Supabase не настроен');
+  if (!isValidUuid(userId)) throw new Error('Некорректный ID пользователя');
   const { error } = await supabase
     .from('clients')
     .update({
@@ -84,6 +92,7 @@ export async function updateClient(userId: string, client: Client): Promise<void
 
 export async function deleteClient(userId: string, clientId: string): Promise<void> {
   if (!supabase) throw new Error('Supabase не настроен');
+  if (!isValidUuid(userId)) throw new Error('Некорректный ID пользователя');
   const { error } = await supabase
     .from('clients')
     .delete()

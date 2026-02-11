@@ -1,10 +1,10 @@
 
 import React, { useState } from 'react';
-import { AccountUser, CompanyInfo } from '../types';
+import { CompanyInfo } from '../types';
 
 interface RegisterScreenProps {
   onBackToLogin: () => void;
-  onRegisterSuccess: (user: AccountUser) => string | null;
+  onRegisterSuccess: (email: string, password: string, company: CompanyInfo) => Promise<string | null>;
 }
 
 type Step = 1 | 2;
@@ -37,7 +37,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
     setStep(2);
   };
 
-  const handleCompleteRegistration = (e: React.FormEvent) => {
+  const handleCompleteRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     const innDigits = inn.replace(/\D/g, '');
@@ -63,24 +63,14 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
       name: login
     };
 
-    const userData: AccountUser = {
-      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-      email,
-      login,
-      password,
-      company: companyData
-    };
-
-    // Simulate API call
-    setTimeout(() => {
-      const errorMessage = onRegisterSuccess(userData);
+    try {
+      const errorMessage = await onRegisterSuccess(email, password, companyData);
       if (errorMessage) {
         setError(errorMessage);
-        setIsLoading(false);
-        return;
       }
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (

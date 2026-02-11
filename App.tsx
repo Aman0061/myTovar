@@ -15,6 +15,7 @@ import Sidebar from './components/Sidebar';
 import { Toaster, toast } from 'react-hot-toast';
 import { supabase } from './lib/supabaseClient';
 import * as clientsApi from './lib/clients';
+import * as authApi from './lib/auth';
 
 const screenToPath: Record<Screen, string> = {
   [Screen.LOGIN]: '/login',
@@ -82,12 +83,15 @@ const App: React.FC = () => {
     onUpdateRealization: (realization: RealizationRecord) => void;
   }>;
 
-  const getUserId = useCallback((): string | null => {
+  const getUserId = useCallback(async (): Promise<string | null> => {
+    const supabaseSession = await authApi.getSession();
+    if (supabaseSession?.user?.id) return supabaseSession.user.id;
     try {
       const raw = localStorage.getItem(storageKeys.session);
       const session: SessionData | null = raw ? JSON.parse(raw) : null;
-      if (!session?.login) return null;
-      return session.userId ?? (session.login === 'admin' ? ADMIN_USER_ID : null);
+      if (session?.login === 'admin') return ADMIN_USER_ID;
+      if (session?.userId) return session.userId;
+      return null;
     } catch {
       return null;
     }
@@ -96,11 +100,6 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const rawUsers = localStorage.getItem(storageKeys.users);
-        const parsedUsers: AccountUser[] = rawUsers ? JSON.parse(rawUsers) : [];
-        setUsers(parsedUsers);
-        const rawSession = localStorage.getItem(storageKeys.session);
-        const session: SessionData | null = rawSession ? JSON.parse(rawSession) : null;
         const rawRealizations = localStorage.getItem(storageKeys.realizations);
         const parsedRealizations: RealizationRecord[] = rawRealizations ? JSON.parse(rawRealizations) : [];
         const normalizedRealizations = parsedRealizations.map((r) => ({
@@ -108,38 +107,58 @@ const App: React.FC = () => {
           items: Array.isArray(r.items) ? r.items : []
         }));
         setRealizations(normalizedRealizations);
-        if (session?.login) {
-          if (session.login === 'admin') {
+
+        // 1) Проверяем Supabase сессию
+        const supabaseSession = await authApi.getSession();
+        if (supabaseSession?.user?.id) {
+          const profile = await authApi.getProfile(supabaseSession.user.id);
+          if (profile) {
             setIsAuthenticated(true);
-            if (!session.userId) {
-              persistSession('admin');
-            }
-            setUserCompany({
-              type: 'ОсОО',
-              inn: '12345678901234',
-              address: 'г. Бишкек, ул. Киевская 100',
-              account: '1180000099887766',
-              bankName: 'KICB',
-              bik: '128001'
-            });
-            if (supabase) {
-              const loaded = await clientsApi.getClients(ADMIN_USER_ID);
+            setUserCompany(authApi.profileToCompanyInfo(profile));
+            const loaded = await clientsApi.getClients(supabaseSession.user.id);
+            setClients(loaded);
+          }
+          setIsAuthInitialized(true);
+          return;
+        }
+
+        // 2) Иначе проверяем admin в localStorage
+        const rawSession = localStorage.getItem(storageKeys.session);
+        const session: SessionData | null = rawSession ? JSON.parse(rawSession) : null;
+        if (session?.login === 'admin') {
+          setIsAuthenticated(true);
+          persistSession('admin');
+          setUserCompany({
+            type: 'ОсОО',
+            inn: '12345678901234',
+            address: 'г. Бишкек, ул. Киевская 100',
+            account: '1180000099887766',
+            bankName: 'KICB',
+            bik: '128001'
+          });
+          if (supabase) {
+            const loaded = await clientsApi.getClients(ADMIN_USER_ID);
+            setClients(loaded);
+          }
+        }
+
+        // Для обратной совместимости: пользователи из localStorage (если есть)
+        const rawUsers = localStorage.getItem(storageKeys.users);
+        const parsedUsers: AccountUser[] = rawUsers ? JSON.parse(rawUsers) : [];
+        setUsers(parsedUsers);
+        if (session?.login && session.login !== 'admin') {
+          const matched = parsedUsers.find((u) => u.login === session.login);
+          if (matched) {
+            setIsAuthenticated(true);
+            setUserCompany(matched.company);
+            if (supabase && matched.id) {
+              const loaded = await clientsApi.getClients(matched.id);
               setClients(loaded);
-            }
-          } else {
-            const matched = parsedUsers.find((u) => u.login === session.login);
-            if (matched) {
-              setIsAuthenticated(true);
-              setUserCompany(matched.company);
-              if (supabase && matched.id) {
-                const loaded = await clientsApi.getClients(matched.id);
-                setClients(loaded);
-              }
             }
           }
         }
       } catch (error) {
-        console.error('Failed to load local auth data:', error);
+        console.error('Failed to load auth data:', error);
       } finally {
         setIsAuthInitialized(true);
       }
@@ -161,8 +180,9 @@ const App: React.FC = () => {
     localStorage.setItem(storageKeys.realizations, JSON.stringify(next));
   };
 
-  const handleLogin = async (login: string, password: string): Promise<string | null> => {
-    if (login === 'admin' && password === 'admin') {
+  const handleLogin = async (loginOrEmail: string, password: string): Promise<string | null> => {
+    // Admin (локальный вход)
+    if (loginOrEmail === 'admin' && password === 'admin') {
       setIsAuthenticated(true);
       setUserCompany({
         type: 'ОсОО',
@@ -181,38 +201,67 @@ const App: React.FC = () => {
       return null;
     }
 
-    const matched = users.find((u) => u.login === login && u.password === password);
-    if (!matched) {
-      return 'Неверный логин или пароль';
+    // Пользователи из localStorage (обратная совместимость)
+    const matched = users.find((u) => (u.login === loginOrEmail || u.email === loginOrEmail) && u.password === password);
+    if (matched) {
+      setIsAuthenticated(true);
+      setUserCompany(matched.company);
+      persistSession(matched.login, matched.id);
+      if (supabase && matched.id) {
+        const loaded = await clientsApi.getClients(matched.id);
+        setClients(loaded);
+      }
+      navigate('/data-grid');
+      return null;
     }
-    setIsAuthenticated(true);
-    setUserCompany(matched.company);
-    persistSession(matched.login, matched.id);
-    if (supabase && matched.id) {
-      const loaded = await clientsApi.getClients(matched.id);
-      setClients(loaded);
+
+    // Supabase Auth (вход по email)
+    if (supabase) {
+      try {
+        const data = await authApi.signIn(loginOrEmail, password);
+        const userId = data?.user?.id;
+        const profile = userId ? await authApi.getProfile(userId) : null;
+        setIsAuthenticated(true);
+        setUserCompany(profile ? authApi.profileToCompanyInfo(profile) : null);
+        const loaded = userId ? await clientsApi.getClients(userId) : [];
+        setClients(loaded);
+        navigate('/data-grid');
+        return null;
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return msg || 'Неверный e-mail или пароль';
+      }
     }
-    navigate('/data-grid');
-    return null;
+
+    return 'Неверный логин или пароль';
   };
 
-  const handleRegisterSuccess = (user: AccountUser): string | null => {
-    const loginExists = users.some((u) => u.login.toLowerCase() === user.login.toLowerCase());
-    const emailExists = users.some((u) => u.email.toLowerCase() === user.email.toLowerCase());
-    if (loginExists) {
-      return 'Этот логин уже занят';
+  const handleRegisterSuccess = async (
+    email: string,
+    password: string,
+    company: CompanyInfo
+  ): Promise<string | null> => {
+    if (!supabase) {
+      return 'Supabase не настроен';
     }
-    if (emailExists) {
-      return 'Этот e-mail уже зарегистрирован';
-    }
+    try {
+      const data = await authApi.signUp(email, password);
+      const userId = data?.user?.id;
+      if (!userId) return 'Регистрация не удалась';
 
-    const nextUsers = [...users, user];
-    persistUsers(nextUsers);
-    setUserCompany(user.company);
-    setIsAuthenticated(true);
-    persistSession(user.login, user.id);
-    navigate('/data-grid');
-    return null;
+      const fullName = company.name || email.split('@')[0] || '';
+      await authApi.upsertProfile(userId, { ...company, full_name: fullName });
+
+      setUserCompany(company);
+      setIsAuthenticated(true);
+      const loaded = await clientsApi.getClients(userId);
+      setClients(loaded);
+      navigate('/data-grid');
+      return null;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return msg || 'Ошибка регистрации';
+    }
   };
 
   const handleSaveRealization = (realization: RealizationRecord) => {
@@ -225,7 +274,8 @@ const App: React.FC = () => {
     persistRealizations(next);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await authApi.signOut();
     setIsAuthenticated(false);
     setUserCompany(null);
     setClients([]);
@@ -235,7 +285,7 @@ const App: React.FC = () => {
 
   const handleAddClient = useCallback(
     async (client: Omit<Client, 'id'>) => {
-      const userId = getUserId();
+      const userId = await getUserId();
       if (!userId) {
         toast.error('Нет сессии');
         return;
@@ -263,7 +313,7 @@ const App: React.FC = () => {
 
   const handleEditClient = useCallback(
     async (client: Client) => {
-      const userId = getUserId();
+      const userId = await getUserId();
       if (!userId) return;
       if (supabase) {
         try {
@@ -284,7 +334,7 @@ const App: React.FC = () => {
 
   const handleDeleteClient = useCallback(
     async (id: string) => {
-      const userId = getUserId();
+      const userId = await getUserId();
       if (!userId) return;
       if (supabase) {
         try {

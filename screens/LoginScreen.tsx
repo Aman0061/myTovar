@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 
 interface LoginScreenProps {
-  onLogin: (login: string, password: string) => string | null;
+  onLogin: (login: string, password: string) => string | null | Promise<string | null>;
   onNavigateToRegister: () => void;
 }
 
@@ -12,19 +12,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-
-    // Simulate network delay for better UX feel
-    setTimeout(() => {
-      const errorMessage = onLogin(username, password);
-      if (errorMessage) {
-        setError(errorMessage);
-        setIsLoading(false);
-      }
-    }, 800);
+    try {
+      const errorMessage = await Promise.resolve(onLogin(username, password));
+      if (errorMessage) setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

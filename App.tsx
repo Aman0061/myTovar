@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Screen, TaxEntry, Client, CompanyInfo, AccountUser, RealizationRecord } from './types';
@@ -13,7 +12,9 @@ import RetailScreen from './screens/RetailScreen';
 import ArchiveScreen from './screens/ArchiveScreen';
 import TnvedAssignScreen from './screens/TnvedAssignScreen';
 import Sidebar from './components/Sidebar';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
+import { supabase } from './lib/supabaseClient';
+import * as clientsApi from './lib/clients';
 
 const screenToPath: Record<Screen, string> = {
   [Screen.LOGIN]: '/login',
@@ -45,8 +46,11 @@ const storageKeys = {
   realizations: 'taxflow_realizations'
 };
 
+const ADMIN_USER_ID = '00000000-0000-0000-0000-000000000001';
+
 type SessionData = {
   login: string;
+  userId?: string;
 };
 
 const App: React.FC = () => {
@@ -60,28 +64,7 @@ const App: React.FC = () => {
   const [users, setUsers] = useState<AccountUser[]>([]);
   const [realizations, setRealizations] = useState<RealizationRecord[]>([]);
   
-  const [clients, setClients] = useState<Client[]>([
-    {
-      id: '1',
-      name: 'ОсОО "Технопром"',
-      type: 'ОсОО',
-      inn: '02506202110123',
-      okpo: '12345678',
-      bankName: 'Оптима Банк',
-      bik: '109001',
-      account: '1180000012345678'
-    },
-    {
-      id: '2',
-      name: 'ИП Иванов Иван Иванович',
-      type: 'ИП',
-      inn: '10101198510234',
-      okpo: '87654321',
-      bankName: 'Демир Банк',
-      bik: '118001',
-      account: '1240000087654321'
-    }
-  ]);
+  const [clients, setClients] = useState<Client[]>([]);
 
   const navigateTo = useCallback((screen: Screen) => {
     const path = screenToPath[screen] || '/';
@@ -99,44 +82,69 @@ const App: React.FC = () => {
     onUpdateRealization: (realization: RealizationRecord) => void;
   }>;
 
-  useEffect(() => {
+  const getUserId = useCallback((): string | null => {
     try {
-      const rawUsers = localStorage.getItem(storageKeys.users);
-      const parsedUsers: AccountUser[] = rawUsers ? JSON.parse(rawUsers) : [];
-      setUsers(parsedUsers);
-      const rawSession = localStorage.getItem(storageKeys.session);
-      const session: SessionData | null = rawSession ? JSON.parse(rawSession) : null;
-      const rawRealizations = localStorage.getItem(storageKeys.realizations);
-      const parsedRealizations: RealizationRecord[] = rawRealizations ? JSON.parse(rawRealizations) : [];
-      const normalizedRealizations = parsedRealizations.map((r) => ({
-        ...r,
-        items: Array.isArray(r.items) ? r.items : []
-      }));
-      setRealizations(normalizedRealizations);
-      if (session?.login) {
-        if (session.login === 'admin') {
-          setIsAuthenticated(true);
-          setUserCompany({
-            type: 'ОсОО',
-            inn: '12345678901234',
-            address: 'г. Бишкек, ул. Киевская 100',
-            account: '1180000099887766',
-            bankName: 'KICB',
-            bik: '128001'
-          });
-        } else {
-          const matched = parsedUsers.find((u) => u.login === session.login);
-          if (matched) {
+      const raw = localStorage.getItem(storageKeys.session);
+      const session: SessionData | null = raw ? JSON.parse(raw) : null;
+      if (!session?.login) return null;
+      return session.userId ?? (session.login === 'admin' ? ADMIN_USER_ID : null);
+    } catch {
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const rawUsers = localStorage.getItem(storageKeys.users);
+        const parsedUsers: AccountUser[] = rawUsers ? JSON.parse(rawUsers) : [];
+        setUsers(parsedUsers);
+        const rawSession = localStorage.getItem(storageKeys.session);
+        const session: SessionData | null = rawSession ? JSON.parse(rawSession) : null;
+        const rawRealizations = localStorage.getItem(storageKeys.realizations);
+        const parsedRealizations: RealizationRecord[] = rawRealizations ? JSON.parse(rawRealizations) : [];
+        const normalizedRealizations = parsedRealizations.map((r) => ({
+          ...r,
+          items: Array.isArray(r.items) ? r.items : []
+        }));
+        setRealizations(normalizedRealizations);
+        if (session?.login) {
+          if (session.login === 'admin') {
             setIsAuthenticated(true);
-            setUserCompany(matched.company);
+            if (!session.userId) {
+              persistSession('admin');
+            }
+            setUserCompany({
+              type: 'ОсОО',
+              inn: '12345678901234',
+              address: 'г. Бишкек, ул. Киевская 100',
+              account: '1180000099887766',
+              bankName: 'KICB',
+              bik: '128001'
+            });
+            if (supabase) {
+              const loaded = await clientsApi.getClients(ADMIN_USER_ID);
+              setClients(loaded);
+            }
+          } else {
+            const matched = parsedUsers.find((u) => u.login === session.login);
+            if (matched) {
+              setIsAuthenticated(true);
+              setUserCompany(matched.company);
+              if (supabase && matched.id) {
+                const loaded = await clientsApi.getClients(matched.id);
+                setClients(loaded);
+              }
+            }
           }
         }
+      } catch (error) {
+        console.error('Failed to load local auth data:', error);
+      } finally {
+        setIsAuthInitialized(true);
       }
-    } catch (error) {
-      console.error('Failed to load local auth data:', error);
-    } finally {
-      setIsAuthInitialized(true);
-    }
+    };
+    loadData();
   }, []);
 
   const persistUsers = (nextUsers: AccountUser[]) => {
@@ -144,8 +152,8 @@ const App: React.FC = () => {
     localStorage.setItem(storageKeys.users, JSON.stringify(nextUsers));
   };
 
-  const persistSession = (login: string) => {
-    localStorage.setItem(storageKeys.session, JSON.stringify({ login }));
+  const persistSession = (login: string, userId?: string) => {
+    localStorage.setItem(storageKeys.session, JSON.stringify({ login, userId: userId ?? (login === 'admin' ? ADMIN_USER_ID : undefined) }));
   };
 
   const persistRealizations = (next: RealizationRecord[]) => {
@@ -153,7 +161,7 @@ const App: React.FC = () => {
     localStorage.setItem(storageKeys.realizations, JSON.stringify(next));
   };
 
-  const handleLogin = (login: string, password: string): string | null => {
+  const handleLogin = async (login: string, password: string): Promise<string | null> => {
     if (login === 'admin' && password === 'admin') {
       setIsAuthenticated(true);
       setUserCompany({
@@ -165,6 +173,10 @@ const App: React.FC = () => {
         bik: '128001'
       });
       persistSession('admin');
+      if (supabase) {
+        const loaded = await clientsApi.getClients(ADMIN_USER_ID);
+        setClients(loaded);
+      }
       navigate('/');
       return null;
     }
@@ -175,7 +187,11 @@ const App: React.FC = () => {
     }
     setIsAuthenticated(true);
     setUserCompany(matched.company);
-    persistSession(matched.login);
+    persistSession(matched.login, matched.id);
+    if (supabase && matched.id) {
+      const loaded = await clientsApi.getClients(matched.id);
+      setClients(loaded);
+    }
     navigate('/data-grid');
     return null;
   };
@@ -194,7 +210,7 @@ const App: React.FC = () => {
     persistUsers(nextUsers);
     setUserCompany(user.company);
     setIsAuthenticated(true);
-    persistSession(user.login);
+    persistSession(user.login, user.id);
     navigate('/data-grid');
     return null;
   };
@@ -212,9 +228,80 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setIsAuthenticated(false);
     setUserCompany(null);
+    setClients([]);
     localStorage.removeItem(storageKeys.session);
     navigate('/login');
   };
+
+  const handleAddClient = useCallback(
+    async (client: Omit<Client, 'id'>) => {
+      const userId = getUserId();
+      if (!userId) {
+        toast.error('Нет сессии');
+        return;
+      }
+      if (supabase) {
+        try {
+          const saved = await clientsApi.insertClient(userId, client);
+          setClients((prev) => [saved, ...prev]);
+          toast.success('Клиент добавлен');
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e);
+          toast.error(`Ошибка: ${msg}`);
+        }
+      } else {
+        const newClient: Client = {
+          ...client,
+          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+        };
+        setClients((prev) => [newClient, ...prev]);
+        toast.success('Клиент добавлен');
+      }
+    },
+    [getUserId]
+  );
+
+  const handleEditClient = useCallback(
+    async (client: Client) => {
+      const userId = getUserId();
+      if (!userId) return;
+      if (supabase) {
+        try {
+          await clientsApi.updateClient(userId, client);
+          setClients((prev) => prev.map((c) => (c.id === client.id ? client : c)));
+          toast.success('Клиент обновлен');
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e);
+          toast.error(`Ошибка: ${msg}`);
+        }
+      } else {
+        setClients((prev) => prev.map((c) => (c.id === client.id ? client : c)));
+        toast.success('Клиент обновлен');
+      }
+    },
+    [getUserId]
+  );
+
+  const handleDeleteClient = useCallback(
+    async (id: string) => {
+      const userId = getUserId();
+      if (!userId) return;
+      if (supabase) {
+        try {
+          await clientsApi.deleteClient(userId, id);
+          setClients((prev) => prev.filter((c) => c.id !== id));
+          toast.success('Клиент удален');
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e);
+          toast.error(`Ошибка: ${msg}`);
+        }
+      } else {
+        setClients((prev) => prev.filter((c) => c.id !== id));
+        toast.success('Клиент удален');
+      }
+    },
+    [getUserId]
+  );
 
   const handleDataLoaded = (entries: TaxEntry[]) => {
     setTaxEntries((prev) => [...entries, ...prev]);
@@ -323,7 +410,12 @@ const App: React.FC = () => {
               path="/clients"
               element={
                 <RequireAuth>
-                  <ClientsScreen clients={clients} onUpdateClients={setClients} />
+                  <ClientsScreen
+                    clients={clients}
+                    onAddClient={handleAddClient}
+                    onEditClient={handleEditClient}
+                    onDeleteClient={handleDeleteClient}
+                  />
                 </RequireAuth>
               }
             />

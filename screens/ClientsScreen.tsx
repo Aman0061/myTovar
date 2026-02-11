@@ -5,21 +5,16 @@ import { toast } from 'react-hot-toast';
 
 interface ClientsScreenProps {
   clients: Client[];
-  onUpdateClients: (clients: Client[]) => void;
+  onAddClient: (client: Omit<Client, 'id'>) => void | Promise<void>;
+  onEditClient: (client: Client) => void | Promise<void>;
+  onDeleteClient: (id: string) => void | Promise<void>;
 }
 
-const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onUpdateClients }) => {
+const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onAddClient, onEditClient, onDeleteClient }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
-  const generateId = () => {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-      return crypto.randomUUID();
-    }
-    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  };
-
   const [newClient, setNewClient] = useState<Omit<Client, 'id'>>({
     name: '',
     type: 'ОсОО',
@@ -37,40 +32,40 @@ const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onUpdateClients 
     );
   }, [clients, search]);
 
-  const handleAddClient = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleAddClient = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingClientId) {
-      onUpdateClients(
-        clients.map((client) =>
-          client.id === editingClientId ? { ...client, ...newClient } : client
-        )
-      );
-      toast.success('Клиент обновлен');
-    } else {
-      const client: Client = {
-        ...newClient,
-        id: generateId()
-      };
-      onUpdateClients([...clients, client]);
-      toast.success('Клиент добавлен');
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      if (editingClientId) {
+        const client = clients.find((c) => c.id === editingClientId);
+        if (client) {
+          await onEditClient({ ...client, ...newClient });
+        }
+      } else {
+        await onAddClient(newClient);
+      }
+      setIsModalOpen(false);
+      setEditingClientId(null);
+      setNewClient({
+        name: '',
+        type: 'ОсОО',
+        inn: '',
+        okpo: '',
+        bankName: '',
+        bik: '',
+        account: ''
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsModalOpen(false);
-    setEditingClientId(null);
-    setNewClient({
-      name: '',
-      type: 'ОсОО',
-      inn: '',
-      okpo: '',
-      bankName: '',
-      bik: '',
-      account: ''
-    });
   };
 
   const handleDeleteClient = (id: string) => {
     if (confirm('Вы уверены, что хотите удалить этого клиента?')) {
-      onUpdateClients(clients.filter(c => c.id !== id));
-      toast.success('Клиент удален');
+      onDeleteClient(id);
     }
   };
 
@@ -331,9 +326,17 @@ const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onUpdateClients 
                 </button>
                 <button 
                   type="submit"
-                  className="flex-[2] bg-primary hover:bg-blue-700 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-primary/25 hover:shadow-primary/40 active:scale-95"
+                  disabled={isSubmitting}
+                  className="flex-[2] bg-primary hover:bg-blue-700 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-primary/25 hover:shadow-primary/40 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {editingClientId ? 'Сохранить' : 'Добавить клиента'}
+                  {isSubmitting ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Сохранение...
+                    </span>
+                  ) : (
+                    editingClientId ? 'Сохранить' : 'Добавить клиента'
+                  )}
                 </button>
               </div>
             </form>

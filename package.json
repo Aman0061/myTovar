@@ -9,11 +9,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.95.3",
+    "chart.js": "^4.5.1",
     "html2canvas": "1.4.1",
     "jspdf": "2.5.1",
     "pdfjs-dist": "^5.4.624",
     "react": "^19.2.4",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.4",
+    "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.13.0",
     "xlsx": "0.18.5"
   },

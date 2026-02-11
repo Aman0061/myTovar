@@ -8,7 +8,12 @@ import DataGridScreen from './screens/DataGridScreen';
 import AddProductsScreen from './screens/AddProductsScreen';
 import NewInvoiceScreen from './screens/NewInvoiceScreen';
 import ClientsScreen from './screens/ClientsScreen';
+import ReportsScreen from './screens/ReportsScreen';
+import RetailScreen from './screens/RetailScreen';
+import ArchiveScreen from './screens/ArchiveScreen';
+import TnvedAssignScreen from './screens/TnvedAssignScreen';
 import Sidebar from './components/Sidebar';
+import { Toaster } from 'react-hot-toast';
 
 const screenToPath: Record<Screen, string> = {
   [Screen.LOGIN]: '/login',
@@ -16,13 +21,19 @@ const screenToPath: Record<Screen, string> = {
   [Screen.LANDING]: '/data-grid',
   [Screen.DATA_GRID]: '/data-grid',
   [Screen.NEW_INVOICE]: '/new-invoice',
-  [Screen.CLIENTS]: '/clients'
+  [Screen.CLIENTS]: '/clients',
+  [Screen.REPORTS]: '/reports',
+  [Screen.RETAIL]: '/retail',
+  [Screen.ARCHIVE]: '/archive'
 };
 
 const pathToScreen = (pathname: string): Screen => {
   if (pathname.startsWith('/data-grid')) return Screen.DATA_GRID;
   if (pathname.startsWith('/new-invoice')) return Screen.NEW_INVOICE;
   if (pathname.startsWith('/clients')) return Screen.CLIENTS;
+  if (pathname.startsWith('/reports')) return Screen.REPORTS;
+  if (pathname.startsWith('/retail')) return Screen.RETAIL;
+  if (pathname.startsWith('/archive')) return Screen.ARCHIVE;
   if (pathname.startsWith('/register')) return Screen.REGISTER;
   if (pathname.startsWith('/login')) return Screen.LOGIN;
   return Screen.DATA_GRID;
@@ -85,6 +96,7 @@ const App: React.FC = () => {
     onBack: () => void;
     realizations: RealizationRecord[];
     onSaveRealization: (realization: RealizationRecord) => void;
+    onUpdateRealization: (realization: RealizationRecord) => void;
   }>;
 
   useEffect(() => {
@@ -192,6 +204,11 @@ const App: React.FC = () => {
     persistRealizations(next);
   };
 
+  const handleUpdateRealization = (realization: RealizationRecord) => {
+    const next = realizations.map((row) => (row.id === realization.id ? realization : row));
+    persistRealizations(next);
+  };
+
   const handleLogout = () => {
     setIsAuthenticated(false);
     setUserCompany(null);
@@ -218,6 +235,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-background-light dark:bg-background-dark">
+      <Toaster position="top-right" />
       {showNavigation && (
         <Sidebar 
           isOpen={isSidebarOpen} 
@@ -296,6 +314,7 @@ const App: React.FC = () => {
                     onBack={() => navigate('/data-grid')}
                     realizations={realizations}
                     onSaveRealization={handleSaveRealization}
+                    onUpdateRealization={handleUpdateRealization}
                   />
                 </RequireAuth>
               }
@@ -305,6 +324,38 @@ const App: React.FC = () => {
               element={
                 <RequireAuth>
                   <ClientsScreen clients={clients} onUpdateClients={setClients} />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                <RequireAuth>
+                  <ReportsScreen />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/retail"
+              element={
+                <RequireAuth>
+                  <RetailScreen entries={taxEntries} onEntriesUpdated={setTaxEntries} />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/archive"
+              element={
+                <RequireAuth>
+                  <ArchiveScreen entries={taxEntries} onEntriesUpdated={setTaxEntries} />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/tnved-assign"
+              element={
+                <RequireAuth>
+                  <TnvedAssignScreen entries={taxEntries} />
                 </RequireAuth>
               }
             />

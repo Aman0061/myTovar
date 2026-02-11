@@ -258,5 +258,72 @@ def excel_smart_parse():
             return jsonify({"error": str(exc)}), 500
 
 
+@app.post("/api/classify-batch")
+def classify_batch():
+    if not OPENAI_API_KEY:
+        return jsonify({"error": "OPENAI_API_KEY не задан"}), 400
+    data = request.get_json(silent=True) or {}
+    items = data.get("items") or []
+    activity = data.get("activity") or ""
+    if not isinstance(items, list) or len(items) == 0:
+        return jsonify({"error": "items is required"}), 400
+
+    client = OpenAI(api_key=OPENAI_API_KEY)
+    cleaned_items = []
+    for item in items:
+        item_id = str(item.get("id", "")).strip()
+        name = str(item.get("name", "")).strip()
+        if not item_id or not name:
+            continue
+        cleaned_items.append((item_id, name))
+
+    if not cleaned_items:
+        return jsonify({"error": "items are empty"}), 400
+
+    def _chunk_list(values, size):
+        for i in range(0, len(values), size):
+            yield values[i:i + size]
+
+    results = []
+    try:
+        for batch in _chunk_list(cleaned_items, 30):
+            lines = [f"{item_id}\t{name}" for item_id, name in batch]
+            prompt = (
+                "Ты — эксперт по ТН ВЭД Кыргызстана.\n"
+                "Для списка товаров ниже подбери наиболее вероятные 10-значные коды ТН ВЭД.\n"
+                f"Учитывай, что компания занимается: {activity}\n"
+                "Правила:\n"
+                "- Возвращай ТОЛЬКО 10-значные коды, без пробелов.\n"
+                "- Не выдумывай код. Если не уверен — верни пустую строку.\n"
+                "Верни ТОЛЬКО JSON массив объектов формата:\n"
+                '[{"id": "id", "code": "10digit"}]\n'
+                "Список:\n"
+                + "\n".join(lines)
+            )
+
+            resp = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0
+            )
+            content = resp.choices[0].message.content.strip()
+            content = re.sub(r"^```json\s*", "", content).replace("```", "").strip()
+            obj_match = re.search(r"\[[\s\S]*\]", content)
+            if obj_match:
+                content = obj_match.group(0)
+            parsed = json.loads(content)
+            for row in parsed:
+                code = str(row.get("code", "")).strip()
+                code = re.sub(r"\D", "", code)
+                if len(code) == 10:
+                    results.append({"id": str(row.get("id", "")), "code": code})
+                else:
+                    results.append({"id": str(row.get("id", "")), "code": ""})
+        return jsonify({"results": results})
+    except Exception as exc:
+        traceback.print_exc()
+        return jsonify({"error": str(exc)}), 500
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5055, debug=True)

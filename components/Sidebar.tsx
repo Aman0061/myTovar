@@ -50,17 +50,31 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, currentScreen, onNavigate, on
           <span className="text-sm font-semibold">Клиенты</span>
         </button>
 
+        <button
+          onClick={() => onNavigate(Screen.RETAIL)}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${currentScreen === Screen.RETAIL ? 'bg-primary/10 text-primary shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+        >
+          <span className="material-symbols-outlined text-[22px]">storefront</span>
+          <span className="text-sm font-semibold">Розница</span>
+        </button>
+
         <button className="w-full flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all">
           <span className="material-symbols-outlined text-[22px]">shopping_cart</span>
           <span className="text-sm font-semibold">Приобретение</span>
         </button>
 
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all">
+        <button
+          onClick={() => onNavigate(Screen.REPORTS)}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${currentScreen === Screen.REPORTS ? 'bg-primary/10 text-primary shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+        >
           <span className="material-symbols-outlined text-[22px]">bar_chart</span>
           <span className="text-sm font-medium">Отчеты</span>
         </button>
 
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all">
+        <button
+          onClick={() => onNavigate(Screen.ARCHIVE)}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${currentScreen === Screen.ARCHIVE ? 'bg-primary/10 text-primary shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+        >
           <span className="material-symbols-outlined text-[22px]">inventory</span>
           <span className="text-sm font-semibold">Архив товаров</span>
         </button>

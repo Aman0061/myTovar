@@ -1,6 +1,7 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Client } from '../types';
+import { toast } from 'react-hot-toast';
 
 interface ClientsScreenProps {
   clients: Client[];
@@ -10,6 +11,8 @@ interface ClientsScreenProps {
 const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onUpdateClients }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [editingClientId, setEditingClientId] = useState<string | null>(null);
   const generateId = () => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
       return crypto.randomUUID();
@@ -36,12 +39,23 @@ const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onUpdateClients 
 
   const handleAddClient = (e: React.FormEvent) => {
     e.preventDefault();
-    const client: Client = {
-      ...newClient,
-      id: generateId()
-    };
-    onUpdateClients([...clients, client]);
+    if (editingClientId) {
+      onUpdateClients(
+        clients.map((client) =>
+          client.id === editingClientId ? { ...client, ...newClient } : client
+        )
+      );
+      toast.success('Клиент обновлен');
+    } else {
+      const client: Client = {
+        ...newClient,
+        id: generateId()
+      };
+      onUpdateClients([...clients, client]);
+      toast.success('Клиент добавлен');
+    }
     setIsModalOpen(false);
+    setEditingClientId(null);
     setNewClient({
       name: '',
       type: 'ОсОО',
@@ -56,8 +70,37 @@ const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onUpdateClients 
   const handleDeleteClient = (id: string) => {
     if (confirm('Вы уверены, что хотите удалить этого клиента?')) {
       onUpdateClients(clients.filter(c => c.id !== id));
+      toast.success('Клиент удален');
     }
   };
+
+  const handleEditClient = (client: Client) => {
+    setEditingClientId(client.id);
+    setNewClient({
+      name: client.name,
+      type: client.type,
+      inn: client.inn,
+      okpo: client.okpo,
+      bankName: client.bankName,
+      bik: client.bik,
+      account: client.account
+    });
+    setIsModalOpen(true);
+    setOpenMenuId(null);
+  };
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        openMenuId &&
+        !(event.target as HTMLElement).closest('[data-client-menu]')
+      ) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, [openMenuId]);
 
   return (
     <div className="p-5 max-w-7xl mx-auto">
@@ -85,7 +128,10 @@ const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onUpdateClients 
             />
           </div>
           <button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setEditingClientId(null);
+              setIsModalOpen(true);
+            }}
             className="bg-primary hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl font-black text-xs flex items-center gap-2 shadow-xl shadow-primary/20 transition-all active:scale-95 whitespace-nowrap"
           >
             <span className="material-symbols-outlined text-xl">person_add</span>
@@ -125,12 +171,33 @@ const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onUpdateClients 
                       <div className="font-medium">Р/С: {client.account}</div>
                     </td>
                     <td className="px-5 py-3 whitespace-nowrap text-right">
-                      <button 
-                        onClick={() => handleDeleteClient(client.id)}
-                        className="p-2 text-red-400 hover:text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl"
-                      >
-                        <span className="material-symbols-outlined text-xl">delete</span>
-                      </button>
+                      <div className="relative inline-flex" data-client-menu>
+                        <button
+                          onClick={() => setOpenMenuId((prev) => (prev === client.id ? null : client.id))}
+                          className="size-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                          title="Действия"
+                        >
+                          <span className="material-symbols-outlined">more_horiz</span>
+                        </button>
+                        {openMenuId === client.id && (
+                          <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 overflow-hidden">
+                            <button
+                              onClick={() => handleEditClient(client)}
+                              className="w-full text-left px-4 py-3 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                            >
+                              <span className="material-symbols-outlined text-base">edit</span>
+                              Редактировать
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClient(client.id)}
+                              className="w-full text-left px-4 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                            >
+                              <span className="material-symbols-outlined text-base">delete</span>
+                              Удалить
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -152,8 +219,16 @@ const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onUpdateClients 
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
             <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Новый клиент</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                {editingClientId ? 'Редактирование клиента' : 'Новый клиент'}
+              </h3>
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setEditingClientId(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
                 <span className="material-symbols-outlined text-3xl">close</span>
               </button>
             </div>
@@ -258,7 +333,7 @@ const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onUpdateClients 
                   type="submit"
                   className="flex-[2] bg-primary hover:bg-blue-700 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-primary/25 hover:shadow-primary/40 active:scale-95"
                 >
-                  Добавить клиента
+                  {editingClientId ? 'Сохранить' : 'Добавить клиента'}
                 </button>
               </div>
             </form>

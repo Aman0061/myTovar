@@ -1,8 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TaxEntry } from '../types';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf';
 import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
+import { toast } from 'react-hot-toast';
 
 interface AddProductsScreenProps {
   onDataLoaded: (entries: TaxEntry[]) => void;
@@ -24,11 +25,19 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
   const [manualDate, setManualDate] = useState('');
   const [previewEntries, setPreviewEntries] = useState<TaxEntry[] | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [confirmClosePreview, setConfirmClosePreview] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingType, setPendingType] = useState<'ai' | 'xml' | null>(null);
+  const [showLongWaitMessage, setShowLongWaitMessage] = useState(false);
 
   GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
   const openPreview = (entries: TaxEntry[]) => {
-    setPreviewEntries(entries);
+    const withRetail = entries.map((entry) => ({
+      ...entry,
+      retailPrice: entry.retailPrice ?? entry.price
+    }));
+    setPreviewEntries(withRetail);
     setIsPreviewOpen(true);
   };
 
@@ -37,10 +46,82 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
     setPreviewEntries(null);
   };
 
+  useEffect(() => {
+    if (!isPreviewOpen) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    const handlePopState = () => {
+      setConfirmClosePreview(true);
+      window.history.pushState(null, '', window.location.href);
+    };
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isPreviewOpen, navigate]);
+
   const parseNumber = (value: string) => {
     const cleaned = value.replace(',', '.').replace(/\s/g, '');
     const num = Number(cleaned);
     return Number.isFinite(num) ? num : 0;
+  };
+
+  const applyMarkup = (percent: number) => {
+    setPreviewEntries((prev) => {
+      if (!prev) return prev;
+      const factor = 1 + percent / 100;
+      return prev.map((entry) => ({
+        ...entry,
+        retailPrice: Number((entry.price * factor).toFixed(2))
+      }));
+    });
+  };
+
+  const formatBytes = (bytes: number) => {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+  };
+
+  const startXmlImport = (file: File) => {
+    const maxSizeBytes = 10 * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      setParseError('Файл слишком большой. Максимум 10 МБ.');
+      toast.error('Файл слишком большой. Максимум 10 МБ.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => handleXmlImport((ev.target?.result as string) || '');
+    reader.onerror = () => {
+      setParseError('Не удалось прочитать XML файл.');
+      toast.error('Не удалось прочитать XML файл.');
+    };
+    reader.readAsText(file);
+  };
+
+  const confirmPendingFile = () => {
+    if (!pendingFile || !pendingType) return;
+    if (pendingType === 'ai') {
+      handleImportFile(pendingFile);
+    } else {
+      startXmlImport(pendingFile);
+    }
+    setPendingFile(null);
+    setPendingType(null);
+  };
+
+  const cancelPendingFile = () => {
+    setPendingFile(null);
+    setPendingType(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (xmlInputRef.current) xmlInputRef.current.value = '';
   };
 
   const handlePreviewChange = (id: string, field: keyof TaxEntry, value: string) => {
@@ -53,6 +134,8 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
           next.quantity = parseNumber(value) || 0;
         } else if (field === 'price') {
           next.price = parseNumber(value) || 0;
+        } else if (field === 'retailPrice') {
+          next.retailPrice = parseNumber(value) || 0;
         } else if (field === 'product') {
           next.product = value;
         } else if (field === 'supplier') {
@@ -75,12 +158,32 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
   const handlePreviewSave = () => {
     if (!previewEntries || previewEntries.length === 0) {
       setParseError('Нет товаров для сохранения.');
+      toast.error('Нет товаров для сохранения');
       return;
     }
     onDataLoaded(previewEntries);
     closePreview();
     navigate('/data-grid');
+    toast.success('Товары сохранены');
   };
+
+  const previewRetailTotal = useMemo(() => {
+    if (!previewEntries) return 0;
+    return previewEntries.reduce((sum, entry) => {
+      const price = entry.retailPrice ?? entry.price;
+      return sum + price * entry.quantity;
+    }, 0);
+  }, [previewEntries]);
+
+  const previewPurchaseTotal = useMemo(() => {
+    if (!previewEntries) return 0;
+    return previewEntries.reduce((sum, entry) => sum + entry.price * entry.quantity, 0);
+  }, [previewEntries]);
+
+  const previewMarkupTotal = useMemo(
+    () => previewRetailTotal - previewPurchaseTotal,
+    [previewRetailTotal, previewPurchaseTotal]
+  );
 
   const readAsText = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -163,6 +266,9 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
       'НЕ меняй написание названий товаров: сохраняй точный текст из документа (регистр, орфография).',
       'Кириллицу не заменяй на латиницу (например, "МЛ" не заменяй на "ML").',
       'Не придумывай слов и не исправляй опечатки. Возвращай строго то, что видишь.',
+      'Extract text EXACTLY as shown. Do not autocorrect, do not guess symbols. If a character is unclear, mark it, but do not replace A with 4 or S with 5.',
+      'Pay extreme attention to commas and dots in quantities and dimensions (e.g., 2,6 should not become 6). Capture all digits.',
+      'Combine multi-line product descriptions into a single string carefully, ensuring no parts of the name are lost.',
       'Если один и тот же товар встречается несколько раз с разными ценами — НЕ объединяй их. Выдавай каждую строку отдельно.',
       'Строго следуй порядковому номеру (№) из документа. Верни row для КАЖДОЙ строки и не создавай дубликаты.',
       'Будь внимателен к единицам измерения. Если видишь "п/м", "кг" или "л" — записывай их как есть, не превращай всё в "шт".',
@@ -181,6 +287,10 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
       });
     }
 
+    const model = payload.imageDataUrls && payload.imageDataUrls.length > 0
+      ? 'gpt-4o'
+      : 'gpt-4o-mini';
+
     const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
@@ -188,7 +298,7 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model,
         input: [{ role: 'user', content }],
         temperature: 0
       })
@@ -262,11 +372,16 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
     const maxSizeBytes = 10 * 1024 * 1024;
     if (file.size > maxSizeBytes) {
       setParseError('Файл слишком большой. Максимум 10 МБ.');
+      toast.error('Файл слишком большой. Максимум 10 МБ.');
       return;
     }
     setIsParsing(true);
+    setShowLongWaitMessage(false);
     setParseError('');
     setProgress(10);
+    const longWaitTimer = setTimeout(() => {
+      setShowLongWaitMessage(true);
+    }, 30000);
     try {
       const name = file.name.toLowerCase();
       let text: string | undefined;
@@ -307,8 +422,11 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
     } catch (error: any) {
       console.error(error);
       setParseError(error?.message || 'Ошибка распознавания. Проверьте файл или API ключ.');
+      toast.error(error?.message || 'Ошибка распознавания');
     } finally {
+      clearTimeout(longWaitTimer);
       setIsParsing(false);
+      setShowLongWaitMessage(false);
     }
   };
 
@@ -318,6 +436,7 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
     const parserError = xmlDoc.querySelector('parsererror');
     if (parserError) {
       setParseError('XML содержит ошибки. Проверьте формат файла.');
+      toast.error('XML содержит ошибки');
       return;
     }
 
@@ -383,14 +502,17 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
 
     if (entries.length > 0) {
       openPreview(entries);
+      toast.success('XML распознан');
     } else {
       setParseError('Не удалось распознать структуру XML. Проверьте формат файла.');
+      toast.error('Не удалось распознать XML');
     }
   };
 
   const handleManualSubmit = () => {
     if (!manualProduct.trim()) {
       setParseError('Укажите наименование товара.');
+      toast.error('Укажите наименование товара');
       return;
     }
     const quantity = Number(manualQty.replace(',', '.')) || 1;
@@ -407,6 +529,7 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
       unit: manualUnit || 'шт'
     };
     openPreview([entry]);
+    toast.success('Товар добавлен');
   };
 
   return (
@@ -435,7 +558,10 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
         accept=".pdf,.xls,.xlsx,.csv"
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) handleImportFile(file);
+          if (file) {
+            setPendingFile(file);
+            setPendingType('ai');
+          }
         }}
       />
       <input
@@ -446,15 +572,8 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (!file) return;
-          const maxSizeBytes = 10 * 1024 * 1024;
-          if (file.size > maxSizeBytes) {
-            setParseError('Файл слишком большой. Максимум 10 МБ.');
-            return;
-          }
-          const reader = new FileReader();
-          reader.onload = (ev) => handleXmlImport((ev.target?.result as string) || '');
-          reader.onerror = () => setParseError('Не удалось прочитать XML файл.');
-          reader.readAsText(file);
+          setPendingFile(file);
+          setPendingType('xml');
         }}
       />
 
@@ -556,10 +675,63 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
         </div>
       )}
 
+      {pendingFile && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                  Подтверждение файла
+                </h3>
+                <p className="text-xs text-slate-500 font-bold">
+                  Проверьте файл перед загрузкой
+                </p>
+              </div>
+              <button
+                onClick={cancelPendingFile}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+                title="Закрыть"
+              >
+                <span className="material-symbols-outlined text-3xl">close</span>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-2">
+              <div className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                {pendingFile.name}
+              </div>
+              <div className="text-xs text-slate-500 font-bold">
+                Размер: {formatBytes(pendingFile.size)}
+              </div>
+              <div className="text-xs text-slate-400">
+                {pendingType === 'xml'
+                  ? 'Будет использован XML‑парсер ГНС.'
+                  : 'Будет выполнено распознавание через ИИ.'}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+              <button
+                onClick={cancelPendingFile}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={confirmPendingFile}
+                className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-black shadow-lg"
+              >
+                Загрузить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isPreviewOpen && previewEntries && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-[2rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-[92rem] rounded-[2rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-xl font-black text-slate-900 dark:text-white">
                   Предпросмотр товаров
@@ -568,8 +740,22 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
                   Проверьте данные, при необходимости измените или удалите
                 </p>
               </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Наценка к закупочной
+                </span>
+                {[10, 20, 30, 40].map((percent) => (
+                  <button
+                    key={percent}
+                    onClick={() => applyMarkup(percent)}
+                    className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  >
+                    +{percent}%
+                  </button>
+                ))}
+              </div>
               <button
-                onClick={closePreview}
+                onClick={() => setConfirmClosePreview(true)}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
                 title="Закрыть"
               >
@@ -577,18 +763,18 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
               </button>
             </div>
 
-            <div className="overflow-x-auto max-h-[60vh]">
+            <div className="overflow-x-hidden max-h-[70vh]">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <th className="py-3 px-4">Дата</th>
-                    <th className="py-3 px-4">Поставщик</th>
-                    <th className="py-3 px-4">Наименование</th>
-                    <th className="py-3 px-4 text-right">Кол-во</th>
-                    <th className="py-3 px-4 text-right">Цена</th>
-                    <th className="py-3 px-4 text-right">Сумма</th>
-                    <th className="py-3 px-4">Ед.</th>
-                    <th className="py-3 px-4 text-right"></th>
+                  <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                    <th className="py-2.5 px-3 w-[120px]">Дата</th>
+                    <th className="py-2.5 px-3 w-[200px]">Поставщик</th>
+                    <th className="py-2.5 px-3 w-[420px]">Наименование</th>
+                    <th className="py-2.5 px-3 w-[90px] text-right">Кол-во</th>
+                    <th className="py-2.5 px-3 w-[120px] text-right">Цена закупки</th>
+                    <th className="py-2.5 px-3 w-[130px] text-right">Цена продажи</th>
+                    <th className="py-2.5 px-3 w-[150px] text-right">Сумма закупки</th>
+                    <th className="py-2.5 px-3 w-[70px] text-right"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -609,59 +795,89 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
                         />
                       </td>
                       <td className="py-2 px-4">
-                        <input
-                          value={item.product}
-                          onChange={(e) => handlePreviewChange(item.id, 'product', e.target.value)}
-                          className="w-full px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs"
-                        />
+                        <div className="flex items-start gap-3">
+                          <div className="size-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
+                            <span className="material-symbols-outlined text-base">inventory_2</span>
+                          </div>
+                          <input
+                            value={item.product}
+                            onChange={(e) => handlePreviewChange(item.id, 'product', e.target.value)}
+                            className="w-full px-2 py-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs"
+                          />
+                        </div>
                       </td>
                       <td className="py-2 px-4 text-right">
                         <input
                           value={String(item.quantity ?? '')}
                           onChange={(e) => handlePreviewChange(item.id, 'quantity', e.target.value)}
-                          className="w-24 text-right px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs"
+                          className="w-full text-right px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs"
                         />
                       </td>
                       <td className="py-2 px-4 text-right">
                         <input
                           value={String(item.price ?? '')}
                           onChange={(e) => handlePreviewChange(item.id, 'price', e.target.value)}
-                          className="w-24 text-right px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs"
+                          className="w-full text-right px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs"
                         />
                       </td>
-                      <td className="py-2 px-4 text-right text-sm font-bold">
-                        {Number(item.total || 0).toLocaleString()}
-                      </td>
-                      <td className="py-2 px-4">
+                      <td className="py-2 px-4 text-right">
                         <input
-                          value={item.unit || ''}
-                          onChange={(e) => handlePreviewChange(item.id, 'unit', e.target.value)}
-                          className="w-20 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs"
+                          value={String(item.retailPrice ?? '')}
+                          onChange={(e) =>
+                            handlePreviewChange(item.id, 'retailPrice', e.target.value)
+                          }
+                          className="w-full text-right px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs"
                         />
+                      </td>
+                      <td className="py-2 px-4 text-right text-sm font-black text-slate-900 dark:text-white">
+                        {(Number(item.price) * item.quantity).toLocaleString()}
                       </td>
                       <td className="py-2 px-4 text-right">
                         <button
                           onClick={() => handlePreviewDelete(item.id)}
-                          className="text-rose-600 hover:text-rose-700 text-xs font-bold"
+                          className="text-rose-600 hover:text-rose-700"
+                          title="Удалить"
                         >
-                          Удалить
+                          <span className="material-symbols-outlined text-base">delete</span>
                         </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className="border-t border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-800/40">
+                    <td colSpan={6} className="py-4 px-4 text-right text-xs font-black uppercase tracking-widest text-slate-400">
+                      Общая сумма партии
+                    </td>
+                    <td className="py-4 px-4 text-right text-lg font-black text-primary">
+                      {previewRetailTotal.toLocaleString()}
+                    </td>
+                    <td colSpan={1} />
+                  </tr>
+                </tfoot>
               </table>
             </div>
 
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-xs text-slate-500 font-bold">
                 Всего: {previewEntries.length}
               </div>
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="text-xs text-slate-500 font-bold">
+                  Закупка: <span className="text-slate-900 dark:text-white">{previewPurchaseTotal.toLocaleString()}</span>
+                </div>
+                <div className="text-xs text-slate-500 font-bold">
+                  Наценка: <span className="text-emerald-600">{previewMarkupTotal.toLocaleString()}</span>
+                </div>
+                <div className="text-xs text-slate-500 font-bold">
+                  Выручка: <span className="text-primary">{previewRetailTotal.toLocaleString()}</span>
+                </div>
+              </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={closePreview}
-                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold"
-                >
+              <button
+                onClick={() => setConfirmClosePreview(true)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold"
+              >
                   Отмена
                 </button>
                 <button
@@ -670,6 +886,73 @@ const AddProductsScreen: React.FC<AddProductsScreenProps> = ({ onDataLoaded }) =
                 >
                   Сохранить
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmClosePreview && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white">Закрыть предпросмотр?</h3>
+              <p className="text-xs text-slate-500 font-bold mt-1">
+                Прогресс будет потерян. Вы уверены?
+              </p>
+            </div>
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setConfirmClosePreview(false)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={() => {
+                  setConfirmClosePreview(false);
+                  closePreview();
+                }}
+                className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-black shadow-lg"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isParsing && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                Идет распознавание
+              </h3>
+              <p className="text-xs text-slate-500 font-bold">
+                Пожалуйста, подождите. Мы обрабатываем документ.
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+                <div className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                  Парсинг файла...
+                </div>
+              </div>
+              {showLongWaitMessage && (
+                <div className="text-xs font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-2">
+                  Осталось немного, подождите пожалуйста
+                </div>
+              )}
+              <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${Math.min(progress, 100)}%` }}
+                />
+              </div>
+              <div className="text-xs text-slate-500 font-bold">
+                Прогресс: {Math.min(progress, 100)}%
               </div>
             </div>
           </div>

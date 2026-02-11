@@ -3,6 +3,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { InvoiceItem, TaxEntry, Client, CompanyInfo, RealizationRecord } from '../types';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { toast } from 'react-hot-toast';
 
 interface NewInvoiceScreenProps {
   onBack: () => void;
@@ -11,9 +12,18 @@ interface NewInvoiceScreenProps {
   userCompany: CompanyInfo | null;
   realizations: RealizationRecord[];
   onSaveRealization: (realization: RealizationRecord) => void;
+  onUpdateRealization: (realization: RealizationRecord) => void;
 }
 
-const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, realizations, onSaveRealization }: NewInvoiceScreenProps) => {
+const NewInvoiceScreen = ({
+  onBack,
+  availableProducts,
+  clients,
+  userCompany,
+  realizations,
+  onSaveRealization,
+  onUpdateRealization
+}: NewInvoiceScreenProps) => {
   const [view, setView] = useState<'list' | 'create'>('list');
   const [customerName, setCustomerName] = useState('');
   const [customerInn, setCustomerInn] = useState('');
@@ -32,6 +42,7 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
   const [issueDate, setIssueDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [exportTarget, setExportTarget] = useState<RealizationRecord | null>(null);
+  const [editingRealization, setEditingRealization] = useState<RealizationRecord | null>(null);
   const exportPdfRef = useRef<HTMLDivElement>(null);
   
   const searchRef = useRef<HTMLDivElement>(null);
@@ -81,6 +92,21 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
   const hasRealizations = realizations.length > 0;
   const toggleMenu = (id: string) => {
     setOpenMenuId((prev) => (prev === id ? null : id));
+  };
+  const startNew = () => {
+    setEditingRealization(null);
+    resetForm();
+    setView('create');
+  };
+  const goToList = () => {
+    setEditingRealization(null);
+    resetForm();
+    setView('list');
+  };
+  const cancelEdit = () => {
+    setEditingRealization(null);
+    resetForm();
+    setView('list');
   };
   const buildXmlFor = (realization: RealizationRecord) => {
     const now = new Date();
@@ -143,6 +169,7 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      toast.success('XML сформирован');
     } catch (error) {
       alert('Нельзя сформировать XML: у реализации нет товаров.');
       console.error(error);
@@ -170,8 +197,10 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
         const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(`invoice_${realization.id}.pdf`);
+        toast.success('Счет на оплату сформирован');
       } catch (error) {
         console.error('Error generating PDF:', error);
+        toast.error('Не удалось сформировать PDF');
       } finally {
         setIsGenerating(false);
         setExportTarget(null);
@@ -229,11 +258,33 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
     const newItem: InvoiceItem = {
       id: generateId(),
       name: product.product,
-      unit: 'шт.',
+      unit: product.unit || 'шт.',
       price: product.price,
       quantity: 1
     };
     setItems(prev => [...prev, newItem]);
+    setSearchQuery('');
+    setIsSearchOpen(false);
+  };
+
+  const addAllProductsToInvoice = () => {
+    if (!canSelectProducts) return;
+    const existing = new Set(items.map((item) => item.name));
+    const next = [...items];
+    availableProducts.forEach((product) => {
+      if (product.archived) return;
+      if (existing.has(product.product)) return;
+      const qty = Number(product.quantity);
+      next.push({
+        id: generateId(),
+        name: product.product,
+        unit: product.unit || 'шт.',
+        price: product.price,
+        quantity: qty > 0 ? qty : 1
+      });
+      existing.add(product.product);
+    });
+    setItems(next);
     setSearchQuery('');
     setIsSearchOpen(false);
   };
@@ -245,6 +296,26 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
     setClientSearchQuery(client.name);
     setSelectedClientId(client.id);
     setIsClientSearchOpen(false);
+  };
+
+  const handleEdit = (realization: RealizationRecord) => {
+    setEditingRealization(realization);
+    setCustomerName(realization.counterparty || '');
+    setCustomerInn(realization.customerInn || '');
+    setCustomerAccount(realization.customerAccount || '');
+    setContractNumber(realization.contractNumber || '');
+    setDeliveryDate(realization.deliveryDate || new Date().toISOString().slice(0, 10));
+    setIssueDate(realization.issueDate || new Date().toISOString().slice(0, 10));
+    setItems(
+      (realization.items || []).map((item) => ({
+        ...item
+      }))
+    );
+    const matchedClient = clients.find((c) => c.name === realization.counterparty);
+    setSelectedClientId(matchedClient ? matchedClient.id : null);
+    setClientSearchQuery(realization.counterparty || '');
+    setView('create');
+    setOpenMenuId(null);
   };
 
   const updateQuantity = (id: string, delta: number) => {
@@ -262,10 +333,11 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
   }, [items]);
 
   const handleSave = () => {
-    if (!selectedClientId || items.length === 0) return;
+    if (items.length === 0) return;
+    if (!selectedClientId && !editingRealization) return;
     const realization: RealizationRecord = {
-      id: generateId(),
-      createdAt: new Date().toISOString().slice(0, 10),
+      id: editingRealization?.id || generateId(),
+      createdAt: editingRealization?.createdAt || new Date().toISOString().slice(0, 10),
       deliveryDate,
       issueDate,
       counterparty: customerName,
@@ -275,8 +347,15 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
       customerAccount: customerAccount || undefined,
       contractNumber: contractNumber || undefined
     };
-    onSaveRealization(realization);
+    if (editingRealization) {
+      onUpdateRealization(realization);
+      toast.success('Реализация обновлена');
+    } else {
+      onSaveRealization(realization);
+      toast.success('Реализация сохранена');
+    }
     resetForm();
+    setEditingRealization(null);
     setView('list');
   };
 
@@ -436,13 +515,20 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
           </div>
 
           {hasRealizations && (
-            <button
-              onClick={() => setView('create')}
-              className="bg-primary hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl font-black text-xs flex items-center gap-2 shadow-xl shadow-primary/20 transition-all active:scale-95 whitespace-nowrap"
-            >
-              <span className="material-symbols-outlined text-xl">add_circle</span>
-              Реализовать
-            </button>
+            <div className="flex items-center gap-2">
+              {editingRealization && (
+                <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-3 py-2 rounded-2xl">
+                  Режим редактирования
+                </span>
+              )}
+              <button
+                onClick={startNew}
+                className="bg-primary hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl font-black text-xs flex items-center gap-2 shadow-xl shadow-primary/20 transition-all active:scale-95 whitespace-nowrap"
+              >
+                <span className="material-symbols-outlined text-xl">add_circle</span>
+                Реализовать
+              </button>
+            </div>
           )}
         </header>
 
@@ -482,15 +568,24 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
                             {openMenuId === row.id && (
                               <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 overflow-hidden" data-realization-menu>
                                 <button
-                                  onClick={() => handleExportXml(row)}
-                                  className="w-full text-left px-4 py-3 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800"
+                                  onClick={() => handleEdit(row)}
+                                  className="w-full text-left px-4 py-3 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
                                 >
+                                  <span className="material-symbols-outlined text-base">edit</span>
+                                  Редактировать
+                                </button>
+                                <button
+                                  onClick={() => handleExportXml(row)}
+                                  className="w-full text-left px-4 py-3 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                                >
+                                  <span className="material-symbols-outlined text-base">description</span>
                                   Сформировать XML (ЭСФ)
                                 </button>
                                 <button
                                   onClick={() => handleExportPdf(row)}
-                                  className="w-full text-left px-4 py-3 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800"
+                                  className="w-full text-left px-4 py-3 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
                                 >
+                                  <span className="material-symbols-outlined text-base">picture_as_pdf</span>
                                   Сформировать счет на оплату
                                 </button>
                               </div>
@@ -508,7 +603,7 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
           <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-8 text-center">
             <p className="text-slate-500 font-bold mb-4">Вы еще не реализовали товары</p>
             <button
-              onClick={() => setView('create')}
+              onClick={startNew}
               className="bg-primary hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-black text-sm inline-flex items-center gap-2 shadow-xl shadow-primary/20 transition-all active:scale-95"
             >
               <span className="material-symbols-outlined text-xl">add_circle</span>
@@ -568,13 +663,17 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
       </div>
 
       <nav className="flex items-center gap-2 mb-4 text-xs font-black">
-        <button onClick={() => setView('list')} className="text-slate-500 hover:text-primary transition-colors">Реализация</button>
+        <button onClick={goToList} className="text-slate-500 hover:text-primary transition-colors">Реализация</button>
         <span className="material-symbols-outlined text-slate-300 text-xs">chevron_right</span>
-        <span className="text-slate-900 dark:text-white">Новая реализация</span>
+        <span className="text-slate-900 dark:text-white">
+          {editingRealization ? 'Редактирование' : 'Новая реализация'}
+        </span>
       </nav>
 
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Новая реализация</h1>
+        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+          {editingRealization ? 'Редактирование' : 'Новая реализация'}
+        </h1>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
@@ -631,6 +730,15 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
         </section>
 
         <section className="relative" ref={searchRef}>
+          <div className="flex items-center justify-end mb-2">
+            <button
+              onClick={addAllProductsToInvoice}
+              disabled={!canSelectProducts || availableProducts.length === 0}
+              className="text-xs font-black text-slate-600 px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-50"
+            >
+              Выбрать все
+            </button>
+          </div>
           <div className={`relative group shadow-md z-20 ${!canSelectProducts ? 'opacity-50 pointer-events-none' : ''}`}>
             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-xl">inventory_2</span>
             <input 
@@ -727,13 +835,22 @@ const NewInvoiceScreen = ({ onBack, availableProducts, clients, userCompany, rea
         </section>
 
         <div className="flex flex-wrap justify-end items-center gap-3 pt-3 mb-12">
+          {editingRealization && (
+            <button
+              onClick={cancelEdit}
+              className="px-6 py-3 rounded-2xl font-black text-sm border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 transition-all flex items-center gap-3"
+            >
+              <span className="material-symbols-outlined">close</span>
+              Отмена редактирования
+            </button>
+          )}
           <button
             disabled={!selectedClientId || items.length === 0}
             onClick={handleSave}
             className="px-6 py-3 rounded-2xl font-black text-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-all flex items-center gap-3 disabled:opacity-50"
           >
             <span className="material-symbols-outlined">save</span>
-            Сохранить реализацию
+            {editingRealization ? 'Сохранить изменения' : 'Сохранить реализацию'}
           </button>
         </div>
       </div>

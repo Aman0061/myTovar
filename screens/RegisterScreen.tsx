@@ -16,8 +16,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
 
   // Step 1 Data
   const [email, setEmail] = useState('');
-  const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   // Step 2 Data
   const [companyType, setCompanyType] = useState<CompanyInfo['type']>('ИП');
@@ -29,14 +29,30 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
 
   const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault();
+    if (password !== confirmPassword) {
+      setError('Пароли не совпадают');
+      return;
+    }
+    setError('');
     setStep(2);
   };
 
   const handleCompleteRegistration = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    const innDigits = inn.replace(/\D/g, '');
+    const bikDigits = bik.replace(/\D/g, '');
+    if (innDigits.length !== 14) {
+      setError('ИНН должен содержать 14 цифр');
+      return;
+    }
+    if (bikDigits.length !== 6) {
+      setError('БИК должен содержать 6 цифр');
+      return;
+    }
     setIsLoading(true);
 
+    const login = email.split('@')[0] || email;
     const companyData: CompanyInfo = {
       type: companyType,
       inn,
@@ -68,211 +84,222 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 px-4 py-6">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-5%] right-[-5%] w-[45%] h-[45%] bg-primary/5 blur-[120px] rounded-full"></div>
         <div className="absolute bottom-[-5%] left-[-5%] w-[45%] h-[45%] bg-primary/10 blur-[120px] rounded-full"></div>
       </div>
 
       <div className="w-full max-w-xl relative">
-        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 p-8 md:p-12 backdrop-blur-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 md:p-6 backdrop-blur-sm">
           
-          <div className="flex flex-col items-center mb-10">
-            <div className="size-14 bg-primary rounded-2xl flex items-center justify-center text-white mb-6 shadow-xl shadow-primary/20">
-              <span className="material-symbols-outlined text-3xl">how_to_reg</span>
+          <div className="flex flex-col items-center mb-4">
+            <div className="size-10 bg-primary rounded-xl flex items-center justify-center text-white mb-3 shadow-lg shadow-primary/20">
+              <span className="material-symbols-outlined text-2xl">how_to_reg</span>
             </div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Регистрация</h1>
-            
-            <div className="flex items-center gap-3 mt-6">
-              <div className={`h-2 rounded-full transition-all duration-300 ${step === 1 ? 'w-12 bg-primary' : 'w-4 bg-slate-200 dark:bg-slate-800'}`}></div>
-              <div className={`h-2 rounded-full transition-all duration-300 ${step === 2 ? 'w-12 bg-primary' : 'w-4 bg-slate-200 dark:bg-slate-800'}`}></div>
+            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Регистрация</h1>
+            <div className="flex items-center gap-2 mt-3">
+              <div className={`h-1.5 rounded-full transition-all duration-300 ${step === 1 ? 'w-8 bg-primary' : 'w-3 bg-slate-200 dark:bg-slate-800'}`}></div>
+              <div className={`h-1.5 rounded-full transition-all duration-300 ${step === 2 ? 'w-8 bg-primary' : 'w-3 bg-slate-200 dark:bg-slate-800'}`}></div>
             </div>
-            <p className="text-slate-500 font-bold text-xs mt-3 uppercase tracking-widest">
+            <p className="text-slate-500 font-bold text-[10px] mt-1.5 uppercase tracking-widest">
               {step === 1 ? 'Шаг 1: Учетные данные' : 'Шаг 2: Данные компании'}
             </p>
           </div>
 
           {step === 1 ? (
-            <form onSubmit={handleNextStep} className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="space-y-2">
-                <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">E-mail адрес</label>
+            <form onSubmit={handleNextStep} className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">E-mail</label>
                 <div className="relative group">
-                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">mail</span>
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-lg">mail</span>
                   <input 
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 rounded-2xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all"
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
                     placeholder="example@mail.com"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Желаемый логин</label>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Пароль</label>
                 <div className="relative group">
-                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">person</span>
-                  <input 
-                    type="text"
-                    required
-                    value={login}
-                    onChange={(e) => setLogin(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 rounded-2xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all"
-                    placeholder="Ваш логин"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Пароль</label>
-                <div className="relative group">
-                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">lock</span>
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-lg">lock</span>
                   <input 
                     type="password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 rounded-2xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all"
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
                     placeholder="••••••••"
                   />
                 </div>
               </div>
 
-              <div className="pt-4 flex flex-col gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Повторите пароль</label>
+                <div className="relative group">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-lg">lock</span>
+                  <input 
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div className="flex items-center gap-2 text-red-500 text-xs font-bold">
+                  <span className="material-symbols-outlined text-base">error</span>
+                  {error}
+                </div>
+              )}
+
+              <div className="pt-2 flex flex-col gap-2">
                 <button 
                   type="submit"
-                  className="w-full bg-primary hover:bg-blue-700 text-white font-black py-5 rounded-2xl transition-all shadow-xl shadow-primary/25 hover:shadow-primary/40 active:scale-95 flex items-center justify-center gap-3 text-lg"
+                  className="w-full bg-primary hover:bg-blue-700 text-white font-black py-3 rounded-xl transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 active:scale-95 flex items-center justify-center gap-2 text-sm"
                 >
                   <span>Далее</span>
-                  <span className="material-symbols-outlined">arrow_forward</span>
+                  <span className="material-symbols-outlined text-lg">arrow_forward</span>
                 </button>
                 <button 
                   type="button"
                   onClick={onBackToLogin}
-                  className="w-full text-slate-400 hover:text-slate-600 font-bold py-2 transition-colors text-sm"
+                  className="w-full text-slate-400 hover:text-slate-600 font-bold py-1.5 transition-colors text-xs"
                 >
                   Уже есть аккаунт? Войти
                 </button>
               </div>
             </form>
           ) : (
-            <form onSubmit={handleCompleteRegistration} className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Тип организации</label>
+            <form onSubmit={handleCompleteRegistration} className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Тип</label>
                   <select 
                     value={companyType}
                     onChange={(e) => setCompanyType(e.target.value as CompanyInfo['type'])}
-                    className="w-full px-5 py-4 rounded-2xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-bold transition-all appearance-none"
+                    className="w-full px-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-bold transition-all appearance-none text-sm"
                   >
-                    <option value="ИП">Индивидуальный предприниматель (ИП)</option>
-                    <option value="ОсОО">Общество с огр. ответственностью (ОсОО)</option>
+                    <option value="ИП">ИП</option>
+                    <option value="ОсОО">ОсОО</option>
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">ИНН</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">ИНН</label>
                   <input 
                     type="text"
+                    inputMode="numeric"
+                    maxLength={14}
                     required
                     value={inn}
-                    onChange={(e) => setInn(e.target.value)}
-                    className="w-full px-5 py-4 rounded-2xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all"
+                    onChange={(e) => setInn(e.target.value.replace(/\D/g, '').slice(0, 14))}
+                    className="w-full px-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
                     placeholder="14 цифр"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Юридический адрес</label>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Юридический адрес</label>
                 <input 
                   type="text"
                   required
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-5 py-4 rounded-2xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all"
-                  placeholder="Город, улица, дом, офис"
+                  className="w-full px-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
+                  placeholder="Город, улица, дом"
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Расчетный счет (IBAN)</label>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Расчетный счет</label>
                 <input 
                   type="text"
                   required
                   value={settlementAccount}
                   onChange={(e) => setSettlementAccount(e.target.value)}
-                  className="w-full px-5 py-4 rounded-2xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all"
+                  className="w-full px-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
                   placeholder="11800000..."
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Название банка</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Банк</label>
                   <input 
                     type="text"
                     required
                     value={bankName}
                     onChange={(e) => setBankName(e.target.value)}
-                    className="w-full px-5 py-4 rounded-2xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all"
-                    placeholder="Напр. Оптима Банк"
+                    className="w-full px-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
+                    placeholder="Оптима Банк"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">БИК Банка</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">БИК</label>
                   <input 
                     type="text"
+                    inputMode="numeric"
+                    maxLength={6}
                     required
                     value={bik}
-                    onChange={(e) => setBik(e.target.value)}
-                    className="w-full px-5 py-4 rounded-2xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all"
+                    onChange={(e) => setBik(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="w-full px-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
                     placeholder="6 цифр"
                   />
                 </div>
               </div>
 
-              <div className="pt-6 flex flex-col sm:flex-row gap-4">
+              {error && (
+                <div className="flex items-center gap-2 text-red-500 text-xs font-bold">
+                  <span className="material-symbols-outlined text-base">error</span>
+                  {error}
+                </div>
+              )}
+
+              <div className="pt-2 flex gap-2">
                 <button 
                   type="button"
-                  onClick={() => setStep(1)}
-                  className="flex-1 border-2 border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-black py-4 rounded-2xl transition-all active:scale-95"
+                  onClick={() => { setStep(1); setError(''); }}
+                  className="flex-1 border-2 border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-black py-2.5 rounded-xl transition-all active:scale-95 text-sm"
                 >
                   Назад
                 </button>
                 <button 
                   type="submit"
                   disabled={isLoading}
-                  className="flex-[2] bg-primary hover:bg-blue-700 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-primary/25 hover:shadow-primary/40 active:scale-95 flex items-center justify-center gap-3"
+                  className="flex-[2] bg-primary hover:bg-blue-700 text-white font-black py-2.5 rounded-xl transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 active:scale-95 flex items-center justify-center gap-2 text-sm"
                 >
                   {isLoading ? (
-                    <div className="size-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   ) : (
                     <>
-                      <span>Завершить регистрацию</span>
-                      <span className="material-symbols-outlined">verified</span>
+                      <span>Завершить</span>
+                      <span className="material-symbols-outlined text-lg">verified</span>
                     </>
                   )}
                 </button>
               </div>
-              {error && (
-                <div className="flex items-center gap-2 text-red-500 text-sm font-bold animate-in fade-in slide-in-from-top-1">
-                  <span className="material-symbols-outlined text-lg">error</span>
-                  {error}
-                </div>
-              )}
             </form>
           )}
 
-          <div className="mt-12 p-6 bg-slate-50 dark:bg-slate-950/50 rounded-3xl border border-slate-100 dark:border-slate-800 flex items-start gap-4">
-            <span className="material-symbols-outlined text-primary">security</span>
-            <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
-              Нажимая «Завершить регистрацию», вы подтверждаете согласие с правилами сервиса и обработкой персональных данных. Ваши платежные реквизиты будут использоваться только для генерации счетов.
+          <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-slate-100 dark:border-slate-800 flex items-start gap-2">
+            <span className="material-symbols-outlined text-primary text-base">security</span>
+            <p className="text-[9px] text-slate-500 leading-snug font-medium">
+              Нажимая «Завершить», вы подтверждаете согласие с правилами сервиса и обработкой персональных данных.
             </p>
           </div>
         </div>
         
-        <p className="text-center mt-8 text-slate-400 text-xs font-bold uppercase tracking-widest">
+        <p className="text-center mt-4 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
           © 2024 TAXFLOW ENTERPRISE SOLUTIONS
         </p>
       </div>

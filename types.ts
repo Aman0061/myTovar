@@ -8,7 +8,8 @@ export enum Screen {
   CLIENTS = 'CLIENTS',
   REPORTS = 'REPORTS',
   RETAIL = 'RETAIL',
-  ARCHIVE = 'ARCHIVE'
+  ARCHIVE = 'ARCHIVE',
+  SETTINGS = 'SETTINGS'
 }
 
 export interface TaxEntry {

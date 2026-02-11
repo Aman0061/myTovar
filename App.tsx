@@ -11,6 +11,7 @@ import ReportsScreen from './screens/ReportsScreen';
 import RetailScreen from './screens/RetailScreen';
 import ArchiveScreen from './screens/ArchiveScreen';
 import TnvedAssignScreen from './screens/TnvedAssignScreen';
+import SettingsScreen from './screens/SettingsScreen';
 import Sidebar from './components/Sidebar';
 import { Toaster, toast } from 'react-hot-toast';
 import { supabase } from './lib/supabaseClient';
@@ -28,7 +29,8 @@ const screenToPath: Record<Screen, string> = {
   [Screen.CLIENTS]: '/clients',
   [Screen.REPORTS]: '/reports',
   [Screen.RETAIL]: '/retail',
-  [Screen.ARCHIVE]: '/archive'
+  [Screen.ARCHIVE]: '/archive',
+  [Screen.SETTINGS]: '/settings'
 };
 
 const pathToScreen = (pathname: string): Screen => {
@@ -38,10 +40,13 @@ const pathToScreen = (pathname: string): Screen => {
   if (pathname.startsWith('/reports')) return Screen.REPORTS;
   if (pathname.startsWith('/retail')) return Screen.RETAIL;
   if (pathname.startsWith('/archive')) return Screen.ARCHIVE;
+  if (pathname.startsWith('/settings')) return Screen.SETTINGS;
   if (pathname.startsWith('/register')) return Screen.REGISTER;
   if (pathname.startsWith('/login')) return Screen.LOGIN;
   return Screen.DATA_GRID;
 };
+
+const THEME_KEY = 'taxflow_theme';
 
 const storageKeys = {
   users: 'taxflow_users',
@@ -68,6 +73,26 @@ const App: React.FC = () => {
   const [realizations, setRealizations] = useState<RealizationRecord[]>([]);
   
   const [clients, setClients] = useState<Client[]>([]);
+
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored === 'dark' || stored === 'light') return stored === 'dark';
+    return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDarkMode) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem(THEME_KEY, isDarkMode ? 'dark' : 'light');
+  }, [isDarkMode]);
+
+  const handleThemeChange = useCallback((dark: boolean) => {
+    setIsDarkMode(dark);
+  }, []);
 
   const navigateTo = useCallback((screen: Screen) => {
     const path = screenToPath[screen] || '/';
@@ -445,6 +470,25 @@ const App: React.FC = () => {
     [getUserId, navigate]
   );
 
+  const handleUpdateCompany = useCallback(
+    async (company: CompanyInfo) => {
+      const userId = await getUserId();
+      setUserCompany(company);
+      if (userId && supabase && userId !== ADMIN_USER_ID) {
+        try {
+          await authApi.upsertProfile(userId, {
+            ...company,
+            full_name: company.name || ''
+          });
+          toast.success('Данные компании сохранены');
+        } catch (e: unknown) {
+          toast.error(e instanceof Error ? e.message : 'Ошибка сохранения');
+        }
+      }
+    },
+    [getUserId]
+  );
+
   const handleEntriesUpdated = useCallback(
     async (next: TaxEntry[]) => {
       const userId = await getUserId();
@@ -600,6 +644,20 @@ const App: React.FC = () => {
               element={
                 <RequireAuth>
                   <TnvedAssignScreen entries={taxEntries} />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <RequireAuth>
+                  <SettingsScreen
+                    userCompany={userCompany}
+                    onUpdateCompany={handleUpdateCompany}
+                    onBack={() => navigate('/data-grid')}
+                    isDarkMode={isDarkMode}
+                    onThemeChange={handleThemeChange}
+                  />
                 </RequireAuth>
               }
             />

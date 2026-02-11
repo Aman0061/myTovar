@@ -15,6 +15,7 @@ import Sidebar from './components/Sidebar';
 import { Toaster, toast } from 'react-hot-toast';
 import { supabase } from './lib/supabaseClient';
 import * as clientsApi from './lib/clients';
+import * as productsApi from './lib/products';
 import * as authApi from './lib/auth';
 
 const screenToPath: Record<Screen, string> = {
@@ -115,8 +116,12 @@ const App: React.FC = () => {
           if (profile) {
             setIsAuthenticated(true);
             setUserCompany(authApi.profileToCompanyInfo(profile));
-            const loaded = await clientsApi.getClients(supabaseSession.user.id);
-            setClients(loaded);
+            const [loadedClients, loadedProducts] = await Promise.all([
+              clientsApi.getClients(supabaseSession.user.id),
+              productsApi.getProducts(supabaseSession.user.id)
+            ]);
+            setClients(loadedClients);
+            setTaxEntries(loadedProducts);
           }
           setIsAuthInitialized(true);
           return;
@@ -137,8 +142,12 @@ const App: React.FC = () => {
             bik: '128001'
           });
           if (supabase) {
-            const loaded = await clientsApi.getClients(ADMIN_USER_ID);
-            setClients(loaded);
+            const [loadedClients, loadedProducts] = await Promise.all([
+              clientsApi.getClients(ADMIN_USER_ID),
+              productsApi.getProducts(ADMIN_USER_ID)
+            ]);
+            setClients(loadedClients);
+            setTaxEntries(loadedProducts);
           }
         }
 
@@ -152,8 +161,12 @@ const App: React.FC = () => {
             setIsAuthenticated(true);
             setUserCompany(matched.company);
             if (supabase && matched.id) {
-              const loaded = await clientsApi.getClients(matched.id);
-              setClients(loaded);
+              const [loadedClients, loadedProducts] = await Promise.all([
+                clientsApi.getClients(matched.id),
+                productsApi.getProducts(matched.id)
+              ]);
+              setClients(loadedClients);
+              setTaxEntries(loadedProducts);
             }
           }
         }
@@ -194,8 +207,12 @@ const App: React.FC = () => {
       });
       persistSession('admin');
       if (supabase) {
-        const loaded = await clientsApi.getClients(ADMIN_USER_ID);
-        setClients(loaded);
+        const [loadedClients, loadedProducts] = await Promise.all([
+          clientsApi.getClients(ADMIN_USER_ID),
+          productsApi.getProducts(ADMIN_USER_ID)
+        ]);
+        setClients(loadedClients);
+        setTaxEntries(loadedProducts);
       }
       navigate('/');
       return null;
@@ -208,8 +225,12 @@ const App: React.FC = () => {
       setUserCompany(matched.company);
       persistSession(matched.login, matched.id);
       if (supabase && matched.id) {
-        const loaded = await clientsApi.getClients(matched.id);
-        setClients(loaded);
+        const [loadedClients, loadedProducts] = await Promise.all([
+          clientsApi.getClients(matched.id),
+          productsApi.getProducts(matched.id)
+        ]);
+        setClients(loadedClients);
+        setTaxEntries(loadedProducts);
       }
       navigate('/data-grid');
       return null;
@@ -223,8 +244,14 @@ const App: React.FC = () => {
         const profile = userId ? await authApi.getProfile(userId) : null;
         setIsAuthenticated(true);
         setUserCompany(profile ? authApi.profileToCompanyInfo(profile) : null);
-        const loaded = userId ? await clientsApi.getClients(userId) : [];
-        setClients(loaded);
+        const [loadedClients, loadedProducts] = userId
+          ? await Promise.all([
+              clientsApi.getClients(userId),
+              productsApi.getProducts(userId)
+            ])
+          : [[], []];
+        setClients(loadedClients);
+        setTaxEntries(loadedProducts);
         navigate('/data-grid');
         return null;
       } catch (e: unknown) {
@@ -279,6 +306,7 @@ const App: React.FC = () => {
     setIsAuthenticated(false);
     setUserCompany(null);
     setClients([]);
+    setTaxEntries([]);
     localStorage.removeItem(storageKeys.session);
     navigate('/login');
   };
@@ -353,10 +381,36 @@ const App: React.FC = () => {
     [getUserId]
   );
 
-  const handleDataLoaded = (entries: TaxEntry[]) => {
-    setTaxEntries((prev) => [...entries, ...prev]);
-    navigate('/data-grid');
-  };
+  const handleDataLoaded = useCallback(
+    async (entries: TaxEntry[]) => {
+      const userId = await getUserId();
+      setTaxEntries((prev) => [...entries, ...prev]);
+      if (userId && supabase) {
+        try {
+          await productsApi.addProducts(userId, entries);
+        } catch (e: unknown) {
+          toast.error(e instanceof Error ? e.message : 'Ошибка сохранения');
+        }
+      }
+      navigate('/data-grid');
+    },
+    [getUserId, navigate]
+  );
+
+  const handleEntriesUpdated = useCallback(
+    async (next: TaxEntry[]) => {
+      const userId = await getUserId();
+      setTaxEntries(next);
+      if (userId && supabase) {
+        try {
+          await productsApi.saveProducts(userId, next);
+        } catch (e: unknown) {
+          toast.error(e instanceof Error ? e.message : 'Ошибка сохранения');
+        }
+      }
+    },
+    [getUserId]
+  );
 
   const showNavigation = isAuthenticated;
 
@@ -427,7 +481,7 @@ const App: React.FC = () => {
                   <DataGridScreen
                     entries={taxEntries}
                     onDataLoaded={handleDataLoaded}
-                    onEntriesUpdated={setTaxEntries}
+                    onEntriesUpdated={handleEntriesUpdated}
                   />
                 </RequireAuth>
               }
@@ -481,7 +535,7 @@ const App: React.FC = () => {
               path="/retail"
               element={
                 <RequireAuth>
-                  <RetailScreen entries={taxEntries} onEntriesUpdated={setTaxEntries} />
+                  <RetailScreen entries={taxEntries} onEntriesUpdated={handleEntriesUpdated} />
                 </RequireAuth>
               }
             />
@@ -489,7 +543,7 @@ const App: React.FC = () => {
               path="/archive"
               element={
                 <RequireAuth>
-                  <ArchiveScreen entries={taxEntries} onEntriesUpdated={setTaxEntries} />
+                  <ArchiveScreen entries={taxEntries} onEntriesUpdated={handleEntriesUpdated} />
                 </RequireAuth>
               }
             />

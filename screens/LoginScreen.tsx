@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import Logo from '../components/Logo';
 
 interface LoginScreenProps {
   onLogin: (login: string, password: string) => string | null | Promise<string | null>;
@@ -34,11 +35,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister
       <div className="w-full max-w-md relative">
         <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 p-10 backdrop-blur-sm">
           <div className="flex flex-col items-center mb-10">
-            <div className="size-16 bg-primary rounded-2xl flex items-center justify-center text-white mb-4 shadow-xl shadow-primary/30">
-              <span className="material-symbols-outlined text-4xl">account_balance</span>
-            </div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">TaxFlow</h1>
-            <p className="text-slate-500 font-bold text-sm mt-2">Система управления налогами</p>
+            <Logo className="h-12 w-auto object-contain" />
+            <p className="text-slate-500 font-bold text-sm mt-2">Система управления бизнесом</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -111,7 +109,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister
         </div>
         
         <p className="text-center mt-8 text-slate-400 text-xs font-bold uppercase tracking-widest">
-          © 2024 TAXFLOW ENTERPRISE SOLUTIONS
+          © 2024 MyBusiness
         </p>
       </div>
     </div>

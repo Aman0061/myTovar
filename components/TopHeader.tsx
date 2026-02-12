@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Screen } from '../types';
+import Logo from './Logo';
 
 interface TopHeaderProps {
   showLogo: boolean;
@@ -16,10 +17,7 @@ const TopHeader: React.FC<TopHeaderProps> = ({ showLogo, currentScreen, onNaviga
         <div className="flex items-center gap-4">
           {showLogo ? (
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate(Screen.DATA_GRID)}>
-              <div className="text-primary flex items-center justify-center">
-                <span className="material-symbols-outlined text-3xl">account_balance_wallet</span>
-              </div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">TaxFlow</h1>
+              <Logo className="h-10 w-auto object-contain" />
             </div>
           ) : (
             <div className="flex items-center gap-9">

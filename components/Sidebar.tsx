@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Screen } from '../types';
+import Logo from './Logo';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -14,14 +15,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, currentScreen, onNavigate, on
   return (
     <aside className={`w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col fixed h-full z-40 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="p-6 flex items-center justify-between">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => onNavigate(Screen.DATA_GRID)}>
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white">
-            <span className="material-symbols-outlined">account_balance</span>
-          </div>
-          <div>
-            <h1 className="text-slate-900 dark:text-white font-bold text-lg leading-none">НалогКонтроль</h1>
-            <p className="text-slate-500 text-[10px] mt-1 uppercase tracking-widest font-bold">ERP System</p>
-          </div>
+        <div className="flex flex-col cursor-pointer" onClick={() => onNavigate(Screen.DATA_GRID)}>
+          <Logo className="h-10 w-auto object-contain" />
+          <p className="text-slate-500 text-[10px] mt-1 uppercase tracking-widest font-bold">ERP System</p>
         </div>
       </div>
 

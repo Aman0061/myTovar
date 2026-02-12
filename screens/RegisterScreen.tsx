@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { CompanyInfo } from '../types';
+import Logo from '../components/Logo';
 
 interface RegisterScreenProps {
   onBackToLogin: () => void;
@@ -84,9 +85,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 md:p-6 backdrop-blur-sm">
           
           <div className="flex flex-col items-center mb-4">
-            <div className="size-10 bg-primary rounded-xl flex items-center justify-center text-white mb-3 shadow-lg shadow-primary/20">
-              <span className="material-symbols-outlined text-2xl">how_to_reg</span>
-            </div>
+            <Logo className="h-12 w-auto object-contain mb-3" />
             <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Регистрация</h1>
             <div className="flex items-center gap-2 mt-3">
               <div className={`h-1.5 rounded-full transition-all duration-300 ${step === 1 ? 'w-8 bg-primary' : 'w-3 bg-slate-200 dark:bg-slate-800'}`}></div>

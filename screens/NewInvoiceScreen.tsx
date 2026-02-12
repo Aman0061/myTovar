@@ -464,7 +464,7 @@ const NewInvoiceScreen = ({
               <div className="grid grid-cols-6 gap-2 mb-6 text-sm">
                 <div className="col-span-1 font-bold">Поставщик:</div>
                 <div className="col-span-5 border-b border-gray-300 pb-1">
-                  {userCompany?.name || 'ОсОО "TaxFlow Solutions"'}{userCompany?.inn ? `, ИНН ${userCompany.inn}` : ''}
+                  {userCompany?.name || 'ОсОО "MyBusiness"'}{userCompany?.inn ? `, ИНН ${userCompany.inn}` : ''}
                 </div>
                 <div className="col-span-1 font-bold mt-2">Покупатель:</div>
                 <div className="col-span-5 border-b border-gray-300 pb-1 mt-2">
@@ -627,7 +627,7 @@ const NewInvoiceScreen = ({
           </div>
           <div className="grid grid-cols-6 gap-2 mb-6 text-sm">
             <div className="col-span-1 font-bold">Поставщик:</div>
-            <div className="col-span-5 border-b border-gray-300 pb-1">{userCompany?.name || 'ОсОО "TaxFlow Solutions"'}, ИНН {userCompany?.inn || '12345678901234'}</div>
+            <div className="col-span-5 border-b border-gray-300 pb-1">{userCompany?.name || 'ОсОО "MyBusiness"'}, ИНН {userCompany?.inn || '12345678901234'}</div>
             <div className="col-span-1 font-bold mt-2">Покупатель:</div>
             <div className="col-span-5 border-b border-gray-300 pb-1 mt-2">{customerName || '________________'} {customerInn ? `(ИНН: ${customerInn})` : ''}</div>
             <div className="col-span-1 font-bold mt-2">Договор:</div>

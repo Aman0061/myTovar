@@ -77,7 +77,7 @@ const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const stored = localStorage.getItem(THEME_KEY);
     if (stored === 'dark' || stored === 'light') return stored === 'dark';
-    return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return false;
   });
 
   useEffect(() => {

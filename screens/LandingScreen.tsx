@@ -1,6 +1,7 @@
 
 import React, { useRef } from 'react';
 import { TaxEntry } from '../types';
+import Logo from '../components/Logo';
 
 interface LandingScreenProps {
   onDataLoaded: (entries: TaxEntry[]) => void;
@@ -112,7 +113,10 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onDataLoaded }) => {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+    <div className="flex-1 relative flex flex-col items-center justify-center px-4 py-12">
+      <div className="absolute top-6 left-6">
+        <Logo className="h-14 w-auto object-contain" />
+      </div>
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -183,7 +187,7 @@ const LandingScreen: React.FC<LandingScreenProps> = ({ onDataLoaded }) => {
           <a href="#" className="text-sm font-bold hover:text-primary transition-colors">Конфиденциальность</a>
           <a href="#" className="text-sm font-bold hover:text-primary transition-colors">Условия</a>
         </div>
-        <p className="text-xs font-medium">© 2024 TaxFlow. Все права защищены.</p>
+        <p className="text-xs font-medium">© 2024 MyBusiness. Все права защищены.</p>
       </footer>
     </div>
   );

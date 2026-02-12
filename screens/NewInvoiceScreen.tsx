@@ -54,12 +54,13 @@ const NewInvoiceScreen = ({
     }
     return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   };
-  const generateExchangeCode = () => {
+  const generateExchangeCode = (): string => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
       return crypto.randomUUID();
     }
-    const hex = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).slice(1);
-    return `${hex()}${hex()}-${hex()}-${hex()}-${hex()}-${hex()}${hex()}${hex()}`;
+    const hex = (n: number) =>
+      Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    return `${hex(8)}-${hex(4)}-4${hex(3)}-${'89ab'[Math.floor(Math.random() * 4)]}${hex(3)}-${hex(12)}`;
   };
   const escapeXml = (value: string) => {
     return value

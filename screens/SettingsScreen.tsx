@@ -5,16 +5,12 @@ interface SettingsScreenProps {
   userCompany: CompanyInfo | null;
   onUpdateCompany: (company: CompanyInfo) => void;
   onBack: () => void;
-  isDarkMode: boolean;
-  onThemeChange: (dark: boolean) => void;
 }
 
 const SettingsScreen: React.FC<SettingsScreenProps> = ({
   userCompany,
   onUpdateCompany,
-  onBack,
-  isDarkMode,
-  onThemeChange
+  onBack
 }) => {
   const [type, setType] = useState<CompanyInfo['type']>('ИП');
   const [name, setName] = useState('');
@@ -68,49 +64,22 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({
     <div className="max-w-2xl mx-auto py-6 px-5">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
             Настройки
           </h2>
           <p className="text-sm text-slate-500 font-medium mt-1">
-            Тема и данные компании
+            Данные компании
           </p>
         </div>
         <button
           onClick={onBack}
-          className="text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-400 transition-colors"
+          className="text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors"
         >
           Назад
         </button>
       </div>
 
       <div className="space-y-6">
-        {/* Тема */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 p-6">
-          <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary">dark_mode</span>
-            Тема
-          </h3>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-slate-600 dark:text-slate-400">
-              Тёмная тема
-            </span>
-            <button
-              role="switch"
-              aria-checked={isDarkMode}
-              onClick={() => onThemeChange(!isDarkMode)}
-              className={`relative w-12 h-7 rounded-full transition-colors ${
-                isDarkMode ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'
-              }`}
-            >
-              <span
-                className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md transition-transform ${
-                  isDarkMode ? 'left-6' : 'left-1'
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-
         {/* Компания */}
         <form
           onSubmit={handleSubmit}

@@ -46,8 +46,6 @@ const pathToScreen = (pathname: string): Screen => {
   return Screen.DATA_GRID;
 };
 
-const THEME_KEY = 'taxflow_theme';
-
 const storageKeys = {
   users: 'taxflow_users',
   session: 'taxflow_session',
@@ -74,24 +72,8 @@ const App: React.FC = () => {
   
   const [clients, setClients] = useState<Client[]>([]);
 
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const stored = localStorage.getItem(THEME_KEY);
-    if (stored === 'dark' || stored === 'light') return stored === 'dark';
-    return false;
-  });
-
   useEffect(() => {
-    const root = document.documentElement;
-    if (isDarkMode) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    localStorage.setItem(THEME_KEY, isDarkMode ? 'dark' : 'light');
-  }, [isDarkMode]);
-
-  const handleThemeChange = useCallback((dark: boolean) => {
-    setIsDarkMode(dark);
+    document.documentElement.classList.remove('dark');
   }, []);
 
   const navigateTo = useCallback((screen: Screen) => {
@@ -517,7 +499,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-background-light dark:bg-background-dark">
+    <div className="flex min-h-screen bg-background-light">
       <Toaster position="top-right" />
       {showNavigation && (
         <Sidebar 
@@ -655,8 +637,6 @@ const App: React.FC = () => {
                     userCompany={userCompany}
                     onUpdateCompany={handleUpdateCompany}
                     onBack={() => navigate('/data-grid')}
-                    isDarkMode={isDarkMode}
-                    onThemeChange={handleThemeChange}
                   />
                 </RequireAuth>
               }

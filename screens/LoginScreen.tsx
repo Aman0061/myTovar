@@ -7,6 +7,13 @@ interface LoginScreenProps {
   onNavigateToRegister: () => void;
 }
 
+const features = [
+  'Автоматизация отчётности',
+  'Учёт налогообложения',
+  'Синхронизация с ГНС',
+  'Простой интерфейс',
+];
+
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -26,45 +33,68 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 px-4">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full"></div>
+    <div className="min-h-screen flex bg-slate-50">
+      {/* Left Panel — Branding */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-white">
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(36,99,235,0.06)_0%,transparent_50%)]" />
+        <div className="absolute inset-0 opacity-50" style={{ backgroundImage: 'linear-gradient(rgba(36,99,235,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(36,99,235,0.04) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+        <div className="relative flex flex-col justify-center px-12 xl:px-20 py-16">
+          <Logo className="h-14 w-auto object-contain mb-10" />
+          <h1 className="text-3xl xl:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+            Начни управлять
+            <br />
+            <span className="text-primary">бизнесом</span>
+          </h1>
+          <p className="mt-6 text-slate-600 text-base max-w-sm leading-relaxed">
+            Система учёта налогов и складского управления. Ведите документацию, формируйте отчёты и держите всё под контролем.
+          </p>
+          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {features.map((f) => (
+              <div key={f} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 shadow-sm">
+                <span className="material-symbols-outlined text-primary text-xl">check_circle</span>
+                <span className="text-slate-700 font-medium text-sm">{f}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="w-full max-w-md relative">
-        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 p-10 backdrop-blur-sm">
-          <div className="flex flex-col items-center mb-10">
+      {/* Right Panel — Form */}
+      <div className="flex-1 flex flex-col px-6 py-12 lg:px-12 xl:px-20 bg-slate-50 overflow-auto">
+        <div className="flex-1 flex flex-col justify-center">
+          <div className="w-full max-w-md mx-auto">
+          <div className="lg:hidden mb-8">
             <Logo className="h-12 w-auto object-contain" />
-            <p className="text-slate-500 font-bold text-sm mt-2">Система управления бизнесом</p>
           </div>
+          <h2 className="text-2xl xl:text-3xl font-black text-slate-900 tracking-tight">Войти в аккаунт</h2>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <div className="space-y-2">
-              <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Логин или e-mail</label>
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Логин или e-mail</label>
               <div className="relative group">
                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">person</span>
-                <input 
+                <input
                   type="text"
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all"
+                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-primary/30 focus:border-primary font-medium transition-all"
                   placeholder="admin или example@mail.com"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Пароль</label>
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Пароль</label>
               <div className="relative group">
                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">lock</span>
-                <input 
+                <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all"
+                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-primary/30 focus:border-primary font-medium transition-all"
                   placeholder="••••••••"
                 />
               </div>
@@ -77,39 +107,39 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister
               </div>
             )}
 
-            <button 
+            <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-primary hover:bg-blue-700 text-white font-black py-5 rounded-2xl transition-all shadow-xl shadow-primary/25 hover:shadow-primary/40 active:scale-95 flex items-center justify-center gap-3 text-lg"
+              className="w-full bg-primary hover:bg-blue-600 text-white font-black py-3 rounded-xl transition-all shadow-lg shadow-primary/20 hover:shadow-primary/30 active:scale-[0.99] flex items-center justify-center gap-2 text-base"
             >
               {isLoading ? (
-                <div className="size-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <div className="size-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>Войти в систему</span>
-                  <span className="material-symbols-outlined">login</span>
+                  <span>Войти</span>
+                  <span className="material-symbols-outlined">arrow_forward</span>
                 </>
               )}
             </button>
+            <p className="mt-2 text-slate-500 text-sm">
+              Нет аккаунта?{' '}
+              <button onClick={onNavigateToRegister} className="text-primary font-bold underline underline-offset-2 hover:text-blue-600 transition-colors">
+                Создать
+              </button>
+            </p>
           </form>
 
-          <div className="mt-10 flex flex-col items-center gap-4">
-            <button 
-              onClick={onNavigateToRegister}
-              className="text-primary hover:text-blue-700 text-sm font-black transition-colors"
-            >
-              Создать новый аккаунт
-            </button>
-            <div className="h-px bg-slate-100 dark:bg-slate-800 w-full"></div>
-            <p className="text-slate-500 text-xs font-medium text-center leading-relaxed">
-              Используйте тестовые данные:<br/>
-              Логин: <span className="font-bold text-slate-900 dark:text-white">admin</span> / Пароль: <span className="font-bold text-slate-900 dark:text-white">admin</span>
-            </p>
+          <p className="mt-8 text-slate-500 text-xs leading-relaxed">
+            Входя в систему, вы принимаете{' '}
+            <a href="#" className="text-primary underline underline-offset-2 hover:text-blue-600">Правила</a>
+            {' '}и{' '}
+            <a href="#" className="text-primary underline underline-offset-2 hover:text-blue-600">Политику</a>.
+          </p>
           </div>
         </div>
-        
-        <p className="text-center mt-8 text-slate-400 text-xs font-bold uppercase tracking-widest">
-          © 2024 MyBusiness
+
+        <p className="pt-8 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">
+          © 2026 MyBusiness
         </p>
       </div>
     </div>

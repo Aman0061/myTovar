@@ -81,7 +81,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
         <div className="absolute bottom-[-5%] left-[-5%] w-[45%] h-[45%] bg-primary/10 blur-[120px] rounded-full"></div>
       </div>
 
-      <div className="w-full max-w-xl relative">
+      <div className="w-full max-w-md relative mx-auto">
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 md:p-6 backdrop-blur-sm">
           
           <div className="flex flex-col items-center mb-4">
@@ -107,7 +107,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
+                    className="w-full pl-9 pr-3 py-2 rounded-lg border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
                     placeholder="example@mail.com"
                   />
                 </div>
@@ -122,7 +122,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
+                    className="w-full pl-9 pr-3 py-2 rounded-lg border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
                     placeholder="••••••••"
                   />
                 </div>
@@ -137,7 +137,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
+                    className="w-full pl-9 pr-3 py-2 rounded-lg border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
                     placeholder="••••••••"
                   />
                 </div>
@@ -153,7 +153,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
               <div className="pt-2 flex flex-col gap-2">
                 <button 
                   type="submit"
-                  className="w-full bg-primary hover:bg-blue-700 text-white font-black py-3 rounded-xl transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 active:scale-95 flex items-center justify-center gap-2 text-sm"
+                  className="w-full bg-primary hover:bg-blue-700 text-white font-black py-2 rounded-lg transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 active:scale-95 flex items-center justify-center gap-2 text-sm"
                 >
                   <span>Далее</span>
                   <span className="material-symbols-outlined text-lg">arrow_forward</span>
@@ -176,7 +176,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
+                  className="w-full px-3 py-2 rounded-lg border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
                   placeholder="Иванов Иван Иванович"
                 />
               </div>
@@ -187,7 +187,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
                   <select 
                     value={companyType}
                     onChange={(e) => setCompanyType(e.target.value as CompanyInfo['type'])}
-                    className="w-full px-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-bold transition-all appearance-none text-sm"
+                    className="w-full px-3 py-2 rounded-lg border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-bold transition-all appearance-none text-sm"
                   >
                     <option value="ИП">ИП</option>
                     <option value="ОсОО">ОсОО</option>
@@ -202,7 +202,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
                     required
                     value={inn}
                     onChange={(e) => setInn(e.target.value.replace(/\D/g, '').slice(0, 14))}
-                    className="w-full px-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
+                    className="w-full px-3 py-2 rounded-lg border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
                     placeholder="14 цифр"
                   />
                 </div>
@@ -215,7 +215,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
                   required
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
+                  className="w-full px-3 py-2 rounded-lg border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
                   placeholder="Город, улица, дом"
                 />
               </div>
@@ -227,7 +227,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
                   required
                   value={settlementAccount}
                   onChange={(e) => setSettlementAccount(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
+                  className="w-full px-3 py-2 rounded-lg border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
                   placeholder="11800000..."
                 />
               </div>
@@ -240,7 +240,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
                     required
                     value={bankName}
                     onChange={(e) => setBankName(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
+                    className="w-full px-3 py-2 rounded-lg border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
                     placeholder="Оптима Банк"
                   />
                 </div>
@@ -253,7 +253,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
                     required
                     value={bik}
                     onChange={(e) => setBik(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="w-full px-3 py-2.5 rounded-xl border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
+                    className="w-full px-3 py-2 rounded-lg border-slate-200 dark:border-slate-800 dark:bg-slate-950 focus:ring-primary focus:border-primary font-medium transition-all text-sm"
                     placeholder="6 цифр"
                   />
                 </div>
@@ -270,14 +270,14 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBackToLogin, onRegist
                 <button 
                   type="button"
                   onClick={() => { setStep(1); setError(''); }}
-                  className="flex-1 border-2 border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-black py-2.5 rounded-xl transition-all active:scale-95 text-sm"
+                  className="flex-1 border-2 border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-black py-2 rounded-lg transition-all active:scale-95 text-sm"
                 >
                   Назад
                 </button>
                 <button 
                   type="submit"
                   disabled={isLoading}
-                  className="flex-[2] bg-primary hover:bg-blue-700 text-white font-black py-2.5 rounded-xl transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 active:scale-95 flex items-center justify-center gap-2 text-sm"
+                  className="flex-[2] bg-primary hover:bg-blue-700 text-white font-black py-2 rounded-lg transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 active:scale-95 flex items-center justify-center gap-2 text-sm"
                 >
                   {isLoading ? (
                     <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>

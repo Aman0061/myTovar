@@ -33,7 +33,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister
   };
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-[#fafafb]">
       {/* Left Panel — Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-white">
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(36,99,235,0.06)_0%,transparent_50%)]" />
@@ -50,7 +50,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister
           </p>
           <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-3">
             {features.map((f) => (
-              <div key={f} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 shadow-sm">
+              <div key={f} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#fafafb] border border-slate-200 shadow-sm">
                 <span className="material-symbols-outlined text-primary text-xl">check_circle</span>
                 <span className="text-slate-700 font-medium text-sm">{f}</span>
               </div>
@@ -60,7 +60,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister
       </div>
 
       {/* Right Panel — Form */}
-      <div className="flex-1 flex flex-col px-6 py-12 lg:px-12 xl:px-20 bg-slate-50 overflow-auto">
+      <div className="flex-1 flex flex-col px-6 py-12 lg:px-12 xl:px-20 bg-[#fafafb] overflow-auto">
         <div className="flex-1 flex flex-col justify-center">
           <div className="w-full max-w-md mx-auto">
           <div className="lg:hidden mb-8">
@@ -129,12 +129,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister
             </p>
           </form>
 
-          <p className="mt-8 text-slate-500 text-xs leading-relaxed">
+          {/* <p className="mt-8 text-slate-500 text-xs leading-relaxed">
             Входя в систему, вы принимаете{' '}
             <a href="#" className="text-primary underline underline-offset-2 hover:text-blue-600">Правила</a>
             {' '}и{' '}
             <a href="#" className="text-primary underline underline-offset-2 hover:text-blue-600">Политику</a>.
-          </p>
+          </p> */}
           </div>
         </div>
 

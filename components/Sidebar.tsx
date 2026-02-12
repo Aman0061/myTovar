@@ -15,19 +15,27 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, currentScreen, onNavigate, on
   return (
     <aside className={`w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col fixed h-full z-40 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="p-6 flex items-center justify-between">
-        <div className="flex flex-col cursor-pointer" onClick={() => onNavigate(Screen.DATA_GRID)}>
+        <div className="flex flex-col cursor-pointer" onClick={() => onNavigate(Screen.REPORTS)}>
           <Logo className="h-10 w-auto object-contain" />
-          <p className="text-slate-500 text-[10px] mt-1 uppercase tracking-widest font-bold">ERP System</p>
+          <p className="text-slate-500 text-[10px] mt-1 uppercase tracking-widest font-bold">Управляй бизнесом</p>
         </div>
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-1">
+        <button
+          onClick={() => onNavigate(Screen.REPORTS)}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${currentScreen === Screen.REPORTS ? 'bg-primary/10 text-primary shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+        >
+          <span className="material-symbols-outlined text-[22px]">bar_chart</span>
+          <span className="text-sm font-semibold">Мой Бизнес</span>
+        </button>
+
         <button 
           onClick={() => onNavigate(Screen.DATA_GRID)}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${currentScreen === Screen.DATA_GRID ? 'bg-primary/10 text-primary shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
         >
           <span className="material-symbols-outlined text-[22px]">inventory_2</span>
-          <span className="text-sm font-semibold">Мой Склад</span>
+          <span className="text-sm font-semibold">Склад</span>
         </button>
 
         <button 
@@ -51,20 +59,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, currentScreen, onNavigate, on
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${currentScreen === Screen.RETAIL ? 'bg-primary/10 text-primary shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
         >
           <span className="material-symbols-outlined text-[22px]">storefront</span>
-          <span className="text-sm font-semibold">Розница</span>
+          <span className="text-sm font-semibold">Продажи</span>
         </button>
 
         <button className="w-full flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all">
           <span className="material-symbols-outlined text-[22px]">shopping_cart</span>
           <span className="text-sm font-semibold">Приобретение</span>
-        </button>
-
-        <button
-          onClick={() => onNavigate(Screen.REPORTS)}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${currentScreen === Screen.REPORTS ? 'bg-primary/10 text-primary shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-        >
-          <span className="material-symbols-outlined text-[22px]">bar_chart</span>
-          <span className="text-sm font-medium">Отчеты</span>
         </button>
 
         <button

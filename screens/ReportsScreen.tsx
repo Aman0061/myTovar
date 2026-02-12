@@ -138,8 +138,8 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ realizations, taxEntries 
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: (context: { parsed?: { y?: number }; parsed?: number }) => {
-              const val = context.parsed?.y ?? context.parsed ?? 0;
+            label: (context: { parsed?: { y?: number } | number }) => {
+              const val = typeof context.parsed === 'number' ? context.parsed : (context.parsed?.y ?? 0);
               return `${Number(val).toLocaleString()} тыс. сом`;
             }
           }
@@ -221,7 +221,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ realizations, taxEntries 
         <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Топ товары</h3>
-            <span className="text-xs font-bold text-slate-400">по реализациям</span>
+            <span className="text-xs font-bold text-slate-400">за месяц</span>
           </div>
           <div className="h-[260px]">
             {barData.datasets[0].data.length > 0 ? (

@@ -23,7 +23,7 @@ import * as authApi from './lib/auth';
 const screenToPath: Record<Screen, string> = {
   [Screen.LOGIN]: '/login',
   [Screen.REGISTER]: '/register',
-  [Screen.LANDING]: '/data-grid',
+  [Screen.LANDING]: '/reports',
   [Screen.DATA_GRID]: '/data-grid',
   [Screen.NEW_INVOICE]: '/new-invoice',
   [Screen.CLIENTS]: '/clients',
@@ -43,7 +43,7 @@ const pathToScreen = (pathname: string): Screen => {
   if (pathname.startsWith('/settings')) return Screen.SETTINGS;
   if (pathname.startsWith('/register')) return Screen.REGISTER;
   if (pathname.startsWith('/login')) return Screen.LOGIN;
-  return Screen.DATA_GRID;
+  return Screen.REPORTS;
 };
 
 const storageKeys = {
@@ -256,7 +256,7 @@ const App: React.FC = () => {
         setTaxEntries(loadedProducts);
         setRealizations(loadedRealizations);
       }
-      navigate('/data-grid');
+      navigate('/reports');
       return null;
     }
 
@@ -278,7 +278,7 @@ const App: React.FC = () => {
         setClients(loadedClients);
         setTaxEntries(loadedProducts);
         setRealizations(loadedRealizations);
-        navigate('/data-grid');
+        navigate('/reports');
         return null;
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -309,7 +309,7 @@ const App: React.FC = () => {
       setIsAuthenticated(true);
       const loaded = await clientsApi.getClients(userId);
       setClients(loaded);
-      navigate('/data-grid');
+      navigate('/reports');
       return null;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -544,7 +544,7 @@ const App: React.FC = () => {
               path="/"
               element={
                 <RequireAuth>
-                  <Navigate to="/data-grid" replace />
+                  <Navigate to="/reports" replace />
                 </RequireAuth>
               }
             />
